@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CORVITX-AI | Research Participant Portal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .face-guide-oval {
+      border: 3px dashed rgba(56, 189, 248, 0.7);
+      border-radius: 50% / 60%;
+      position: absolute;
+      top: 15%;
+      left: 20%;
+      width: 60%;
+      height: 70%;
+      pointer-events: none;
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
+    }
+    @keyframes pulseRing {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.05); opacity: 0.4; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+    .pulse-animation {
+      animation: pulseRing 3s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-cyan-500 selection:text-white">
+
+  <!-- Mobile Top Bar -->
+  <header class="bg-slate-900/90 border-b border-slate-800 px-4 py-3 sticky top-0 z-30 backdrop-blur-md">
+    <div class="max-w-lg mx-auto flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-600 to-emerald-500 flex items-center justify-center font-bold text-white shadow-md">
+          C
+        </div>
+        <div>
+          <h1 class="font-bold text-sm leading-tight text-white tracking-wide">CORVITX-AI</h1>
+          <p class="text-[10px] text-cyan-400 font-medium">Research Participant Portal</p>
+        </div>
+      </div>
+      <div id="participantBadge" class="hidden text-xs bg-slate-800 border border-slate-700 px-2.5 py-1 rounded-full text-slate-300 font-mono">
+        ID: <span id="badgeId" class="text-emerald-400 font-bold">---</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-lg mx-auto w-full p-4 flex flex-col justify-center">
+
+    <!-- STEP 1: INFORMED CONSENT & STUDY INFORMATION -->
+    <section id="step1" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
+      <div class="space-y-1">
+        <span class="text-xs font-bold text-cyan-400 uppercase tracking-widest">Step 1 of 4</span>
+        <h2 class="text-xl font-bold text-white">Study Information & Consent</h2>
+      </div>
+
+      <div class="text-xs text-slate-300 space-y-2.5 bg-slate-950/60 p-4 rounded-xl border border-slate-800/80 leading-relaxed max-h-56 overflow-y-auto">
+        <p><strong class="text-cyan-300">Project:</strong> Validation of Non-Contact Camera-Based Physiological Telemetry (PPG Heart Rate & Respiration Rate Estimation).</p>
+        <p><strong class="text-cyan-300">Procedure:</strong> You will position your smartphone camera facing your forehead/face for a 30-second resting recording. The algorithm extracts microvascular pulsatile blood flow from RGB frames.</p>
+        <p><strong class="text-cyan-300">Privacy & Anonymity:</strong> No names, phone numbers, location data, or contact details are collected. Raw video is processed in volatile memory on the research station and is not stored permanently. Only aggregate numerical rPPG signals and validation statistics are recorded.</p>
+        <p><strong class="text-cyan-300">Voluntary:</strong> Participation is completely voluntary, and you may discontinue at any second.</p>
+      </div>
+
+      <div class="space-y-3 pt-2">
+        <label class="flex items-start space-x-3 cursor-pointer group">
+          <input type="checkbox" id="consentCheckbox" class="mt-1 w-5 h-5 rounded border-slate-700 bg-slate-800 text-cyan-500 focus:ring-cyan-400 focus:ring-offset-slate-900">
+          <span class="text-xs text-slate-300 group-hover:text-white transition">
+            I confirm that I am 18 years or older, understand the study purposes, and voluntarily consent to participating in this non-contact vitals collection session.
+          </span>
+        </label>
+      </div>
+
+      <button id="btnConsentNext" disabled class="w-full py-3.5 px-4 rounded-xl font-bold text-sm bg-slate-800 text-slate-500 cursor-not-allowed transition duration-200">
+        Accept & Continue
+      </button>
+    </section>
+
+    <!-- STEP 2: REFERENCE MEASUREMENTS & CONDITIONS -->
+    <section id="step2" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-5">
+      <div class="space-y-1">
+        <span class="text-xs font-bold text-cyan-400 uppercase tracking-widest">Step 2 of 4</span>
+        <h2 class="text-xl font-bold text-white">Ground Truth References</h2>
+        <p class="text-xs text-slate-400">Independent measurements are required to evaluate AI accuracy.</p>
+      </div>
+
+      <!-- Participant Demographic Info -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Age (Years)</label>
+          <input type="number" id="inputAge" value="21" min="18" max="99" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Condition</label>
+          <select id="selectCondition" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+            <option value="Resting" selected>Resting (Calm, Still)</option>
+            <option value="Motion">Motion (Talking / Head Tilt)</option>
+            <option value="Occlusion">Occlusion (Partial Face Cover)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Heart Rate Reference -->
+      <div class="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 space-y-2">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-bold text-rose-400 flex items-center gap-1.5">
+            <span>❤️</span> Heart Rate (HR Reference)
+          </label>
+          <span class="text-[10px] text-slate-400">BPM</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <input type="number" id="inputRefHr" placeholder="e.g. 74" min="40" max="180" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+          <select id="selectRefHrMethod" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-xs text-slate-300 focus:outline-none focus:border-cyan-500">
+            <option value="Smartwatch (Apple/Samsung/Fitbit)">Smartwatch</option>
+            <option value="Pulse Oximeter Transducer">Pulse Oximeter</option>
+            <option value="Manual Radial Pulse Count (60s)">Manual Radial Pulse</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Respiration Rate Reference & Guided 60s Breathing Timer Widget -->
+      <div class="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 space-y-2.5">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-bold text-sky-400 flex items-center gap-1.5">
+            <span>🫁</span> Respiration Rate (RR Reference)
+          </label>
+          <span class="text-[10px] text-slate-400">Breaths / min (RPM)</span>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-2">
+          <input type="number" id="inputRefRr" placeholder="e.g. 16" min="6" max="40" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+          <select id="selectRefRrMethod" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-xs text-slate-300 focus:outline-none focus:border-cyan-500">
+            <option value="Guided 60s Breathing Timer">Guided 60s Timer</option>
+            <option value="Manual Chest Rise Count">Manual Chest Rise</option>
+          </select>
+        </div>
+
+        <!-- Interactive 60s Breathing Timer Widget -->
+        <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800/80 flex items-center justify-between">
+          <div>
+            <p class="text-[11px] font-semibold text-slate-300">Need help measuring RR?</p>
+            <p class="text-[10px] text-slate-400">Count your normal chest rises for 60s:</p>
+          </div>
+          <button type="button" id="btnBreathingTimer" class="px-3 py-1.5 text-xs font-bold bg-sky-600/30 text-sky-300 border border-sky-500/40 rounded-lg hover:bg-sky-600 hover:text-white transition">
+            Start Timer (60s)
+          </button>
+        </div>
+        <div id="timerCountdownBox" class="hidden text-center py-1 text-xs text-amber-400 font-mono font-bold">
+          Count your breaths: <span id="timerSeconds">60</span>s remaining...
+        </div>
+      </div>
+
+      <!-- Lighting condition -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-300 mb-1">Ambient Lighting</label>
+        <select id="selectLighting" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-cyan-500">
+          <option value="Indoor LED (~300-500 lux)">Indoor LED Room Light (Recommended)</option>
+          <option value="Natural Window Daylight (~800 lux)">Natural Window Daylight</option>
+          <option value="Dim Indoor Light (~150 lux)">Dim Indoor Light</option>
+        </select>
+      </div>
+
+      <div class="flex space-x-3">
+        <button id="btnBackToStep1" class="w-1/3 py-3 px-4 rounded-xl font-bold text-xs bg-slate-800 text-slate-300 hover:bg-slate-700 transition">
+          Back
+        </button>
+        <button id="btnStep2Next" class="w-2/3 py-3 px-4 rounded-xl font-bold text-sm bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950 hover:opacity-90 shadow-lg shadow-cyan-500/20 transition">
+          Confirm References
+        </button>
+      </div>
+    </section>
+
+    <!-- STEP 3: CAMERA ALIGNMENT & POSITIONING CHECKLIST -->
+    <section id="step3" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
+      <div class="space-y-1">
+        <span class="text-xs font-bold text-cyan-400 uppercase tracking-widest">Step 3 of 4</span>
+        <h2 class="text-xl font-bold text-white">Camera Alignment</h2>
+        <p class="text-xs text-slate-400">Position your face inside the guide oval.</p>
+      </div>
+
+      <!-- Camera Preview Viewport with Facial Guide -->
+      <div class="relative w-full aspect-[4/3] bg-black rounded-xl overflow-hidden border border-slate-700 flex items-center justify-center">
+        <video id="cameraPreview" autoplay playsinline muted class="w-full h-full object-cover -scale-x-100"></video>
+        <div class="face-guide-oval"></div>
+        <div id="cameraLoadingText" class="absolute text-xs text-slate-400 flex items-center gap-2">
+          <svg class="animate-spin h-4 w-4 text-cyan-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+          Initializing camera...
+        </div>
+      </div>
+
+      <!-- Positioning Guidelines -->
+      <div class="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 space-y-2 text-xs text-slate-300">
+        <div class="flex items-center space-x-2 text-cyan-300 font-semibold">
+          <span>✓</span><span>Distance: 0.5 to 1.0 meter (face filling oval)</span>
+        </div>
+        <div class="flex items-center space-x-2 text-cyan-300 font-semibold">
+          <span>✓</span><span>Stable Surface: Rest your phone against a cup or stand</span>
+        </div>
+        <div class="flex items-center space-x-2 text-cyan-300 font-semibold">
+          <span>✓</span><span>Even Lighting: Avoid bright lamps directly behind you</span>
+        </div>
+      </div>
+
+      <div class="flex space-x-3">
+        <button id="btnBackToStep2" class="w-1/3 py-3 px-4 rounded-xl font-bold text-xs bg-slate-800 text-slate-300 hover:bg-slate-700 transition">
+          Back
+        </button>
+        <button id="btnStartRecording" class="w-2/3 py-3.5 px-4 rounded-xl font-bold text-sm bg-gradient-to-r from-emerald-400 to-teal-500 text-slate-950 hover:brightness-110 shadow-lg shadow-emerald-500/20 transition flex items-center justify-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-rose-600 animate-ping"></span>
+          Start 30s Recording
+        </button>
+      </div>
+    </section>
+
+    <!-- STEP 4: ACTIVE RECORDING & WEBRTC TRANSMISSION -->
+    <section id="step4" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-5 text-center">
+      <div class="space-y-1">
+        <span class="text-xs font-bold text-rose-400 uppercase tracking-widest flex items-center justify-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+          RECORDING IN PROGRESS
+        </span>
+        <h2 class="text-xl font-bold text-white">Streaming Physiological Data</h2>
+        <p class="text-xs text-slate-400">Please breathe normally and remain still.</p>
+      </div>
+
+      <!-- Live Video Pip -->
+      <div class="relative w-48 h-48 mx-auto rounded-full overflow-hidden border-4 border-cyan-400 shadow-[0_0_30px_rgba(34,211,238,0.3)]">
+        <video id="recordingVideoPip" autoplay playsinline muted class="w-full h-full object-cover -scale-x-100"></video>
+        <div class="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent"></div>
+        <div class="absolute bottom-2 inset-x-0 text-center">
+          <span id="countdownNumber" class="text-3xl font-black text-cyan-300 font-mono tracking-tight">30s</span>
+        </div>
+      </div>
+
+      <!-- Progress Bar -->
+      <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
+        <div id="recordingProgressBar" class="bg-gradient-to-r from-cyan-400 to-emerald-400 h-2.5 rounded-full w-0 transition-all duration-300"></div>
+      </div>
+
+      <!-- Live Processing Telemetry -->
+      <div class="grid grid-cols-3 gap-2 bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
+        <div>
+          <span class="block text-[10px] text-slate-400 uppercase">Face Lock</span>
+          <span id="statusFaceLock" class="text-xs font-bold text-amber-400">Locking...</span>
+        </div>
+        <div>
+          <span class="block text-[10px] text-slate-400 uppercase">Frames Sent</span>
+          <span id="statusFrameCount" class="text-xs font-bold text-white font-mono">0</span>
+        </div>
+        <div>
+          <span class="block text-[10px] text-slate-400 uppercase">Signal SNR</span>
+          <span id="statusSnr" class="text-xs font-bold text-cyan-400 font-mono">-- dB</span>
+        </div>
+      </div>
+
+      <button id="btnCancelRecording" class="w-full py-2.5 px-4 rounded-xl font-bold text-xs text-rose-400 border border-rose-500/30 hover:bg-rose-500/10 transition">
+        Cancel Recording
+      </button>
+    </section>
+
+    <!-- STEP 5: RESULTS & SESSION SUMMARY -->
+    <section id="step5" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-5">
+      <div class="text-center space-y-1">
+        <div class="w-12 h-12 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto text-2xl font-bold border border-emerald-500/40">
+          ✓
+        </div>
+        <h2 class="text-xl font-bold text-white">Session Complete!</h2>
+        <p id="summarySubtitle" class="text-xs text-slate-400">Physiological trial data successfully recorded.</p>
+      </div>
+
+      <!-- Comparison Cards -->
+      <div class="space-y-3">
+        <!-- Heart Rate Card -->
+        <div class="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800 flex items-center justify-between">
+          <div>
+            <span class="text-xs text-rose-400 font-bold block">Heart Rate</span>
+            <span class="text-[11px] text-slate-400">Ground Truth: <strong id="resRefHr" class="text-white">--</strong> BPM</span>
+          </div>
+          <div class="text-right">
+            <span class="text-xs text-slate-400 block">AI Estimate</span>
+            <span id="resEstHr" class="text-lg font-black text-rose-300 font-mono">-- BPM</span>
+          </div>
+        </div>
+
+        <!-- Respiration Rate Card -->
+        <div class="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800 flex items-center justify-between">
+          <div>
+            <span class="text-xs text-sky-400 font-bold block">Respiration Rate</span>
+            <span class="text-[11px] text-slate-400">Ground Truth: <strong id="resRefRr" class="text-white">--</strong> RPM</span>
+          </div>
+          <div class="text-right">
+            <span class="text-xs text-slate-400 block">AI Estimate</span>
+            <span id="resEstRr" class="text-lg font-black text-sky-300 font-mono">-- RPM</span>
+          </div>
+        </div>
+
+        <!-- Research Telemetry Metadata -->
+        <div class="bg-slate-950/50 p-3 rounded-xl border border-slate-800/80 text-[11px] space-y-1 text-slate-300">
+          <div class="flex justify-between">
+            <span class="text-slate-400">Participant ID:</span>
+            <span id="resPartId" class="font-mono text-cyan-400 font-bold">---</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Quality / Validity:</span>
+            <span id="resValidityBadge" class="font-bold text-emerald-400">VALID SESSION</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Spectral SNR:</span>
+            <span id="resSnr" class="font-mono text-white">-- dB</span>
+          </div>
+          <div id="resFailureReasonBox" class="hidden text-rose-400 pt-1 text-[10px]">
+            <strong>Note:</strong> <span id="resFailureReason">---</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-2 pt-1">
+        <button id="btnNewSession" class="w-full py-3 px-4 rounded-xl font-bold text-sm bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950 hover:brightness-110 shadow-lg shadow-cyan-500/20 transition">
+          Perform Another Recording (e.g. Motion or Occlusion)
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Mobile Footer -->
+  <footer class="py-3 text-center text-[10px] text-slate-400 border-t border-slate-800/60 bg-slate-950">
+    CORVITX-AI Contactless Patient Monitoring Research Study &bull; Strict Research Data Separation
+  </footer>
+
+  <script>
+    // Application State
+    let sessionToken = null;
+    let participantId = null;
+    let localStream = null;
+    let peerConnection = null;
+    let countdownInterval = null;
+    let telemetryPollInterval = null;
+    let breathTimerInterval = null;
+    let recordingDuration = 30; // 30 seconds
+    let secondsLeft = recordingDuration;
+
+    // DOM Elements
+    const step1 = document.getElementById("step1");
+    const step2 = document.getElementById("step2");
+    const step3 = document.getElementById("step3");
+    const step4 = document.getElementById("step4");
+    const step5 = document.getElementById("step5");
+
+    const consentCheckbox = document.getElementById("consentCheckbox");
+    const btnConsentNext = document.getElementById("btnConsentNext");
+    const participantBadge = document.getElementById("participantBadge");
+    const badgeId = document.getElementById("badgeId");
+
+    // Enable/disable consent button
+    consentCheckbox.addEventListener("change", () => {
+      if (consentCheckbox.checked) {
+        btnConsentNext.disabled = false;
+        btnConsentNext.classList.remove("bg-slate-800", "text-slate-500", "cursor-not-allowed");
+        btnConsentNext.classList.add("bg-gradient-to-r", "from-cyan-500", "to-emerald-500", "text-slate-950", "shadow-lg", "shadow-cyan-500/20");
+      } else {
+        btnConsentNext.disabled = true;
+        btnConsentNext.classList.add("bg-slate-800", "text-slate-500", "cursor-not-allowed");
+        btnConsentNext.classList.remove("bg-gradient-to-r", "from-cyan-500", "to-emerald-500", "text-slate-950", "shadow-lg", "shadow-cyan-500/20");
+      }
+    });
+
+    // Step 1 -> Step 2
+    btnConsentNext.addEventListener("click", async () => {
+      try {
+        const res = await fetch("/api/webrtc/session/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            consent: true,
+            condition: "Resting",
+            lighting: document.getElementById("selectLighting").value
+          })
+        });
+        const data = await res.json();
+        sessionToken = data.session_token;
+        participantId = data.participant_id;
+
+        badgeId.textContent = participantId;
+        participantBadge.classList.remove("hidden");
+
+        step1.classList.add("hidden");
+        step2.classList.remove("hidden");
+      } catch (err) {
+        alert("Failed to initialize session with backend. Please verify your internet connection: " + err);
+      }
+    });
+
+    // Step 2 -> Step 1 (Back)
+    document.getElementById("btnBackToStep1").addEventListener("click", () => {
+      step2.classList.add("hidden");
+      step1.classList.remove("hidden");
+    });
+
+    // Step 2 -> Step 3 (Camera preview setup)
+    document.getElementById("btnStep2Next").addEventListener("click", async () => {
+      const refHr = parseFloat(document.getElementById("inputRefHr").value);
+      const refRr = parseFloat(document.getElementById("inputRefRr").value);
+
+      if (!refHr || isNaN(refHr) || refHr < 40 || refHr > 180) {
+        alert("Please enter a valid reference Heart Rate (between 40 and 180 BPM).");
+        return;
+      }
+      if (!refRr || isNaN(refRr) || refRr < 6 || refRr > 40) {
+        alert("Please enter a valid reference Respiration Rate (between 6 and 40 RPM).");
+        return;
+      }
+
+      step2.classList.add("hidden");
+      step3.classList.remove("hidden");
+
+      // Initialize camera preview
+      await initCamera();
+    });
+
+    // Step 3 -> Step 2 (Back)
+    document.getElementById("btnBackToStep2").addEventListener("click", () => {
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+      }
+      step3.classList.add("hidden");
+      step2.classList.remove("hidden");
+    });
+
+    // 60-second breathing timer helper
+    const btnBreathingTimer = document.getElementById("btnBreathingTimer");
+    const timerCountdownBox = document.getElementById("timerCountdownBox");
+    const timerSeconds = document.getElementById("timerSeconds");
+
+    btnBreathingTimer.addEventListener("click", () => {
+      if (breathTimerInterval) {
+        clearInterval(breathTimerInterval);
+        breathTimerInterval = null;
+        btnBreathingTimer.textContent = "Start Timer (60s)";
+        timerCountdownBox.classList.add("hidden");
+        return;
+      }
+
+      let timeLeft = 60;
+      timerSeconds.textContent = timeLeft;
+      timerCountdownBox.classList.remove("hidden");
+      btnBreathingTimer.textContent = "Stop Timer";
+
+      breathTimerInterval = setInterval(() => {
+        timeLeft--;
+        timerSeconds.textContent = timeLeft;
+        if (timeLeft <= 0) {
+          clearInterval(breathTimerInterval);
+          breathTimerInterval = null;
+          timerCountdownBox.textContent = "Time's up! Enter the number of breaths counted into the RR field.";
+          btnBreathingTimer.textContent = "Restart (60s)";
+        }
+      }, 1000);
+    });
+
+    // Camera Acquisition
+    async function initCamera() {
+      const videoEl = document.getElementById("cameraPreview");
+      const loadingEl = document.getElementById("cameraLoadingText");
+
+      try {
+        // Ideal resolution for rPPG DSP without overloading CPU: 640x480 at 30 fps
+        const constraints = {
+          audio: false,
+          video: {
+            facingMode: "user",
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+            frameRate: { ideal: 30 }
+          }
+        };
+
+        localStream = await navigator.mediaDevices.getUserMedia(constraints);
+        videoEl.srcObject = localStream;
+        loadingEl.classList.add("hidden");
+      } catch (err) {
+        console.error("Camera access error:", err);
+        alert("Camera permission denied or camera not supported: " + err.message + "\nEnsure you are using HTTPS and have granted camera permissions.");
+      }
+    }
+
+    // Step 3 -> Step 4 (Start 30s WebRTC Recording)
+    document.getElementById("btnStartRecording").addEventListener("click", async () => {
+      if (!localStream) {
+        alert("Camera stream is not ready. Please refresh and allow camera access.");
+        return;
+      }
+
+      step3.classList.add("hidden");
+      step4.classList.remove("hidden");
+
+      // Attach local stream to pip
+      document.getElementById("recordingVideoPip").srcObject = localStream;
+
+      // Start WebRTC connection
+      await startWebRtcSession();
+
+      // Start 30s countdown
+      secondsLeft = recordingDuration;
+      document.getElementById("countdownNumber").textContent = secondsLeft + "s";
+      document.getElementById("recordingProgressBar").style.width = "0%";
+
+      countdownInterval = setInterval(() => {
+        secondsLeft--;
+        document.getElementById("countdownNumber").textContent = secondsLeft + "s";
+        const pct = ((recordingDuration - secondsLeft) / recordingDuration) * 100;
+        document.getElementById("recordingProgressBar").style.width = pct + "%";
+
+        if (secondsLeft <= 0) {
+          clearInterval(countdownInterval);
+          finishRecordingSession();
+        }
+      }, 1000);
+
+      // Start telemetry polling for UI feedback
+      telemetryPollInterval = setInterval(pollTelemetry, 1000);
+    });
+
+    // Cancel recording
+    document.getElementById("btnCancelRecording").addEventListener("click", () => {
+      cleanupWebRtc();
+      step4.classList.add("hidden");
+      step3.classList.remove("hidden");
+    });
+
+    // WebRTC Peer Connection & Streaming
+    async function startWebRtcSession() {
+      peerConnection = new RTCPeerConnection({
+        iceServers: [
+          { urls: "stun:stun.l.google.com:19302" },
+          { urls: "stun:stun1.l.google.com:19302" }
+        ]
+      });
+
+      // Add local video track
+      localStream.getTracks().forEach(track => {
+        peerConnection.addTrack(track, localStream);
+      });
+
+      // Create offer
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
+
+      // Wait for complete ICE gathering before posting offer
+      if (peerConnection.iceGatheringState !== "complete") {
+        await new Promise(resolve => {
+          function checkState() {
+            if (peerConnection.iceGatheringState === "complete") {
+              peerConnection.removeEventListener("icegatheringstatechange", checkState);
+              resolve();
+            }
+          }
+          peerConnection.addEventListener("icegatheringstatechange", checkState);
+          setTimeout(resolve, 2000);
+        });
+      }
+
+      // Send offer to backend
+      const res = await fetch("/api/webrtc/offer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session_token: sessionToken,
+          sdp: peerConnection.localDescription.sdp,
+          type: peerConnection.localDescription.type
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error("Server rejected WebRTC offer");
+      }
+
+      const answer = await res.json();
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+      console.log("WebRTC PeerConnection established successfully!");
+    }
+
+    // Telemetry polling during recording
+    async function pollTelemetry() {
+      if (!sessionToken) return;
+      try {
+        const res = await fetch(`/api/webrtc/session/${sessionToken}/status`);
+        if (res.ok) {
+          const st = await res.json();
+          document.getElementById("statusFrameCount").textContent = st.total_frames;
+          
+          const faceLockEl = document.getElementById("statusFaceLock");
+          if (st.face_detected) {
+            faceLockEl.textContent = "LOCKED ✓";
+            faceLockEl.className = "text-xs font-bold text-emerald-400";
+          } else {
+            faceLockEl.textContent = "SEARCHING...";
+            faceLockEl.className = "text-xs font-bold text-amber-400";
+          }
+
+          if (st.current_snr > 0) {
+            document.getElementById("statusSnr").textContent = st.current_snr.toFixed(1) + " dB";
+          }
+        }
+      } catch (e) {
+        // Silent poll error
+      }
+    }
+
+    // Finish session and finalize measurements
+    async function finishRecordingSession() {
+      clearInterval(countdownInterval);
+      clearInterval(telemetryPollInterval);
+
+      const refHr = parseFloat(document.getElementById("inputRefHr").value);
+      const refRr = parseFloat(document.getElementById("inputRefRr").value);
+      const age = parseInt(document.getElementById("inputAge").value) || 21;
+      const condition = document.getElementById("selectCondition").value;
+      const refHrMethod = document.getElementById("selectRefHrMethod").value;
+      const refRrMethod = document.getElementById("selectRefRrMethod").value;
+
+      try {
+        const res = await fetch("/api/webrtc/session/finalize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            session_token: sessionToken,
+            ref_hr: refHr,
+            ref_hr_method: refHrMethod,
+            ref_rr: refRr,
+            ref_rr_method: refRrMethod,
+            age: age,
+            condition: condition,
+            notes: "Remote participant collection via Mobile WebRTC"
+          })
+        });
+
+        const data = await res.json();
+        cleanupWebRtc();
+
+        // Render Step 5 (Summary)
+        renderSummary(data.record);
+      } catch (err) {
+        alert("Failed to save research record: " + err);
+        cleanupWebRtc();
+      }
+    }
+
+    function renderSummary(record) {
+      step4.classList.add("hidden");
+      step5.classList.remove("hidden");
+
+      document.getElementById("resPartId").textContent = record.Participant_ID;
+      document.getElementById("resRefHr").textContent = record.HR_Reference_BPM;
+      document.getElementById("resRefRr").textContent = record.RR_Reference_RPM;
+
+      document.getElementById("resEstHr").textContent = record.HR_Estimated_BPM ? record.HR_Estimated_BPM + " BPM" : "Not Resolved";
+      document.getElementById("resEstRr").textContent = record.RR_Estimated_RPM ? record.RR_Estimated_RPM + " RPM" : "Not Resolved";
+
+      document.getElementById("resSnr").textContent = (record.Avg_SNR_dB || "--") + " dB";
+
+      const isValid = record.Valid_Session === "True" || record.Valid_Session === true;
+      const badge = document.getElementById("resValidityBadge");
+      const reasonBox = document.getElementById("resFailureReasonBox");
+      const reasonText = document.getElementById("resFailureReason");
+
+      if (isValid) {
+        badge.textContent = "VALID RESEARCH TRIAL ✓";
+        badge.className = "font-bold text-emerald-400";
+        reasonBox.classList.add("hidden");
+      } else {
+        badge.textContent = "INVALID TRIAL (DATA DISCARDED)";
+        badge.className = "font-bold text-rose-400";
+        reasonText.textContent = record.Failure_Reason || "Pulsatile amplitude below threshold.";
+        reasonBox.classList.remove("hidden");
+      }
+    }
+
+    function cleanupWebRtc() {
+      if (countdownInterval) clearInterval(countdownInterval);
+      if (telemetryPollInterval) clearInterval(telemetryPollInterval);
+      if (peerConnection) {
+        peerConnection.close();
+        peerConnection = null;
+      }
+      if (localStream) {
+        localStream.getTracks().forEach(t => t.stop());
+        localStream = null;
+      }
+    }
+
+    // "Perform Another Recording" button
+    document.getElementById("btnNewSession").addEventListener("click", () => {
+      step5.classList.add("hidden");
+      step1.classList.remove("hidden");
+      consentCheckbox.checked = false;
+      btnConsentNext.disabled = true;
+      btnConsentNext.classList.add("bg-slate-800", "text-slate-500", "cursor-not-allowed");
+      btnConsentNext.classList.remove("bg-gradient-to-r", "from-cyan-500", "to-emerald-500", "text-slate-950");
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+Metric,Value,Description
+Total Attempted Sessions,2,Total remote sessions initiated
+Valid HR Estimates Count,0,Number of paired HR measurements
+Valid RR Estimates Count,0,Number of paired RR measurements
+Failed Session Count,2,Sessions with missing/unusable vitals
+Failed Estimate Rate (%),100.0%,Percentage of unusable estimates
+Heart Rate MAE (BPM),N/A,Mean Absolute Error
+Heart Rate RMSE (BPM),N/A,Root Mean Square Error
+Heart Rate Pearson r,N/A,Pearson correlation
+HR Within +/- 5 BPM (%),N/A,ANSI/AAMI EC13 Compliance
+Respiration Rate MAE (RPM),N/A,Mean Absolute Error
+Respiration Rate RMSE (RPM),N/A,Root Mean Square Error
+Respiration Rate Pearson r,N/A,Pearson correlation

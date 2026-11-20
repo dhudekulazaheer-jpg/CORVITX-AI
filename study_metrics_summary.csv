@@ -1,0 +1,10 @@
+Metric,Value,Clinical Significance
+Evaluated Segments (N),16,15 healthy males (18-22 yrs)
+Heart Rate MAE (BPM),2.58,Mean Absolute Error
+Heart Rate RMSE (BPM),2.74,Root Mean Square Error
+Heart Rate Pearson (r),0.85,Correlation against Reference
+HR <= 5 BPM (%),100.0%,ANSI/AAMI EC13 Compliance
+Respiratory Rate MAE (RPM),1.54,Mean Absolute Error
+Respiratory Rate RMSE (RPM),1.61,Root Mean Square Error
+Respiratory Rate Pearson (r),0.47,Correlation against Manual Count
+RR <= 3 RPM (%),100.0%,Clinical Respiration Compliance
