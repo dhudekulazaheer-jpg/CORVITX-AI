@@ -47,6 +47,9 @@ export default function App() {
   // Feature 3: Patient EHR Drawer State
   const [showEhrDrawer, setShowEhrDrawer] = useState(false);
   
+  // Option A: Alarm Threshold Configuration Modal State
+  const [showAlarmModal, setShowAlarmModal] = useState(false);
+  
   // Feature 4: Interactive Clinical Alarm Thresholds
   const [thresholds, setThresholds] = useState({
     highHr: 120,
@@ -427,6 +430,16 @@ export default function App() {
                 )}
               </button>
             )}
+
+            {/* Alarm Thresholds Configuration Modal Trigger */}
+            <button
+              onClick={() => setShowAlarmModal(true)}
+              className="px-3.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200/90 text-slate-700 rounded-full text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer hover:border-slate-300"
+              title="Configure Medical Alarm Limits & Presets"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5 text-slate-600" />
+              <span className="hidden sm:inline">Alarm Limits</span>
+            </button>
 
             {/* Feature 2: Header Export Button */}
             <button
@@ -949,128 +962,52 @@ export default function App() {
                 </div>
 
                 {/* ============================================================ */}
-                {/* FEATURE 4: INTERACTIVE ALARM THRESHOLD SLIDERS               */}
+                {/* OPTION A: COMPACT ICU ALARM PROTOCOL OVERVIEW CARD           */}
                 {/* ============================================================ */}
-                <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-[0_4px_25px_-4px_rgba(15,23,42,0.05)]">
-                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-[0_4px_25px_-4px_rgba(15,23,42,0.05)]">
+                  <div className="flex items-center justify-between mb-3 pb-3 border-b border-slate-100">
                     <div className="flex items-center gap-2">
                       <SlidersHorizontal className="w-4 h-4 text-slate-700" />
-                      <h3 className="text-sm font-bold text-[#0F172A] uppercase tracking-wider">
-                        Custom Alarm Thresholds
+                      <h3 className="text-xs font-bold text-[#0F172A] uppercase tracking-wider">
+                        Alarm Protocol & Limits
                       </h3>
                     </div>
-                    <span className="text-[10px] font-bold text-sky-600 bg-sky-50 px-2.5 py-0.5 rounded-full border border-sky-200">
-                      LIVE TUNER
-                    </span>
+                    <button
+                      onClick={() => setShowAlarmModal(true)}
+                      className="text-[11px] font-bold text-sky-600 bg-sky-50 hover:bg-sky-100 px-3 py-1 rounded-full border border-sky-200 transition cursor-pointer flex items-center gap-1"
+                    >
+                      <span>⚙️ Tune Limits</span>
+                    </button>
                   </div>
 
-                  <div className="space-y-4">
-                    {/* Slider 1: High HR */}
-                    <div>
-                      <div className="flex justify-between items-center text-xs mb-1.5">
-                        <span className="font-bold text-slate-700">Tachycardia Alert (High HR)</span>
-                        <span className="font-mono font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">
-                          &gt; {thresholds.highHr} BPM
-                        </span>
-                      </div>
-                      <input 
-                        type="range" 
-                        min="90" 
-                        max="160" 
-                        value={thresholds.highHr}
-                        onChange={(e) => setThresholds({ ...thresholds, highHr: Number(e.target.value) })}
-                        className="w-full accent-rose-500 h-1.5 bg-slate-100 rounded-lg cursor-pointer"
-                      />
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-slate-50/80 p-3 rounded-2xl border border-slate-100">
+                      <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Heart Rate Limits</span>
+                      <span className="font-mono font-black text-slate-800 text-sm mt-0.5 block">
+                        {thresholds.lowHr} – {thresholds.highHr} <span className="text-[10px] text-rose-500 font-sans font-bold">BPM</span>
+                      </span>
                     </div>
 
-                    {/* Slider 2: Low HR */}
-                    <div>
-                      <div className="flex justify-between items-center text-xs mb-1.5">
-                        <span className="font-bold text-slate-700">Bradycardia Alert (Low HR)</span>
-                        <span className="font-mono font-bold text-sky-600 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-200">
-                          &lt; {thresholds.lowHr} BPM
-                        </span>
-                      </div>
-                      <input 
-                        type="range" 
-                        min="40" 
-                        max="65" 
-                        value={thresholds.lowHr}
-                        onChange={(e) => setThresholds({ ...thresholds, lowHr: Number(e.target.value) })}
-                        className="w-full accent-sky-500 h-1.5 bg-slate-100 rounded-lg cursor-pointer"
-                      />
+                    <div className="bg-slate-50/80 p-3 rounded-2xl border border-slate-100">
+                      <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Respiration Limits</span>
+                      <span className="font-mono font-black text-slate-800 text-sm mt-0.5 block">
+                        {thresholds.lowRr} – {thresholds.highRr} <span className="text-[10px] text-teal-600 font-sans font-bold">RPM</span>
+                      </span>
                     </div>
+                  </div>
 
-                    {/* Slider 3: High RR */}
-                    <div>
-                      <div className="flex justify-between items-center text-xs mb-1.5">
-                        <span className="font-bold text-slate-700">Tachypnea Alert (High Resp)</span>
-                        <span className="font-mono font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
-                          &gt; {thresholds.highRr} RPM
-                        </span>
-                      </div>
-                      <input 
-                        type="range" 
-                        min="20" 
-                        max="35" 
-                        value={thresholds.highRr}
-                        onChange={(e) => setThresholds({ ...thresholds, highRr: Number(e.target.value) })}
-                        className="w-full accent-teal-600 h-1.5 bg-slate-100 rounded-lg cursor-pointer"
-                      />
-                    </div>
-
-                    {/* Slider 4: Low RR */}
-                    <div>
-                      <div className="flex justify-between items-center text-xs mb-1.5">
-                        <span className="font-bold text-slate-700">Bradypnea / Apnea Limit</span>
-                        <span className="font-mono font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                          &lt; {thresholds.lowRr} RPM
-                        </span>
-                      </div>
-                      <input 
-                        type="range" 
-                        min="6" 
-                        max="14" 
-                        value={thresholds.lowRr}
-                        onChange={(e) => setThresholds({ ...thresholds, lowRr: Number(e.target.value) })}
-                        className="w-full accent-amber-500 h-1.5 bg-slate-100 rounded-lg cursor-pointer"
-                      />
-                    </div>
-
-                    {/* Preset Buttons */}
-                    <div className="pt-2 flex items-center justify-between gap-2 border-t border-slate-100">
-                      <button 
-                        onClick={() => setThresholds({ highHr: 120, lowHr: 50, highRr: 28, lowRr: 8 })}
-                        className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
-                      >
-                        Adult Standard
-                      </button>
-                      <button 
-                        onClick={() => setThresholds({ highHr: 105, lowHr: 55, highRr: 24, lowRr: 10 })}
-                        className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
-                      >
-                        Geriatric Strict
-                      </button>
-                      <button 
-                        onClick={() => setThresholds({ highHr: 150, lowHr: 70, highRr: 35, lowRr: 14 })}
-                        className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
-                      >
-                        Pediatric
-                      </button>
-                    </div>
-
-                    {/* Feature 5: Audio Chime Demonstration Button */}
-                    <div className="pt-2 border-t border-slate-100">
-                      <button 
-                        onClick={() => playAlarmChime('high')}
-                        className="w-full py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/90 text-slate-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-2xs hover:border-slate-300"
-                        title="Click to synthesize and test the IEC 60601-1-8 medical alarm tone"
-                      >
-                        <Volume2 className="w-3.5 h-3.5 text-rose-500" />
-                        Test IEC 60601-1-8 Audio Chime
-                      </button>
-                    </div>
-
+                  <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500 pt-2.5 border-t border-slate-100">
+                    <span className="flex items-center gap-1.5 font-semibold text-slate-600">
+                      <span className={`w-2 h-2 rounded-full ${audioEnabled ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
+                      {audioEnabled ? 'Audio Armed (IEC 60601-1-8)' : 'Audio Siren Muted'}
+                    </span>
+                    <button
+                      onClick={() => playAlarmChime('high')}
+                      className="text-rose-600 hover:text-rose-700 font-bold hover:underline cursor-pointer flex items-center gap-1 text-[11px]"
+                      title="Test Audio Siren"
+                    >
+                      <Volume2 className="w-3.5 h-3.5" /> Test Siren
+                    </button>
                   </div>
                 </div>
 
@@ -1270,6 +1207,164 @@ export default function App() {
                 className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-xs font-bold transition cursor-pointer"
               >
                 Close Drawer
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* OPTION A: ALARM THRESHOLD CONFIGURATION MODAL                */}
+      {/* ============================================================ */}
+      {showAlarmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 transform transition-all">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-600">
+                  <SlidersHorizontal className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-[#0F172A] tracking-tight">
+                    Alarm Threshold Config
+                  </h3>
+                  <p className="text-[11px] text-slate-400 font-semibold">
+                    IEC 60601-1-8 Telemetry Siren Limits
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowAlarmModal(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center cursor-pointer transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Sliders Body */}
+            <div className="space-y-4">
+              {/* Slider 1: High HR */}
+              <div>
+                <div className="flex justify-between items-center text-xs mb-1.5">
+                  <span className="font-bold text-slate-700">Tachycardia Alert (High HR)</span>
+                  <span className="font-mono font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">
+                    &gt; {thresholds.highHr} BPM
+                  </span>
+                </div>
+                <input 
+                  type="range" 
+                  min="90" 
+                  max="160" 
+                  value={thresholds.highHr}
+                  onChange={(e) => setThresholds({ ...thresholds, highHr: Number(e.target.value) })}
+                  className="w-full accent-rose-500 h-1.5 bg-slate-100 rounded-lg cursor-pointer"
+                />
+              </div>
+
+              {/* Slider 2: Low HR */}
+              <div>
+                <div className="flex justify-between items-center text-xs mb-1.5">
+                  <span className="font-bold text-slate-700">Bradycardia Alert (Low HR)</span>
+                  <span className="font-mono font-bold text-sky-600 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-200">
+                    &lt; {thresholds.lowHr} BPM
+                  </span>
+                </div>
+                <input 
+                  type="range" 
+                  min="40" 
+                  max="65" 
+                  value={thresholds.lowHr}
+                  onChange={(e) => setThresholds({ ...thresholds, lowHr: Number(e.target.value) })}
+                  className="w-full accent-sky-500 h-1.5 bg-slate-100 rounded-lg cursor-pointer"
+                />
+              </div>
+
+              {/* Slider 3: High RR */}
+              <div>
+                <div className="flex justify-between items-center text-xs mb-1.5">
+                  <span className="font-bold text-slate-700">Tachypnea Alert (High Resp)</span>
+                  <span className="font-mono font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
+                    &gt; {thresholds.highRr} RPM
+                  </span>
+                </div>
+                <input 
+                  type="range" 
+                  min="20" 
+                  max="35" 
+                  value={thresholds.highRr}
+                  onChange={(e) => setThresholds({ ...thresholds, highRr: Number(e.target.value) })}
+                  className="w-full accent-teal-600 h-1.5 bg-slate-100 rounded-lg cursor-pointer"
+                />
+              </div>
+
+              {/* Slider 4: Low RR */}
+              <div>
+                <div className="flex justify-between items-center text-xs mb-1.5">
+                  <span className="font-bold text-slate-700">Bradypnea / Apnea Limit</span>
+                  <span className="font-mono font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                    &lt; {thresholds.lowRr} RPM
+                  </span>
+                </div>
+                <input 
+                  type="range" 
+                  min="6" 
+                  max="14" 
+                  value={thresholds.lowRr}
+                  onChange={(e) => setThresholds({ ...thresholds, lowRr: Number(e.target.value) })}
+                  className="w-full accent-amber-500 h-1.5 bg-slate-100 rounded-lg cursor-pointer"
+                />
+              </div>
+
+              {/* Preset Buttons */}
+              <div>
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+                  Clinical Ward Presets
+                </span>
+                <div className="grid grid-cols-3 gap-2">
+                  <button 
+                    onClick={() => setThresholds({ highHr: 120, lowHr: 50, highRr: 28, lowRr: 8 })}
+                    className="text-xs font-bold py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer transition text-center"
+                  >
+                    Adult
+                  </button>
+                  <button 
+                    onClick={() => setThresholds({ highHr: 105, lowHr: 55, highRr: 24, lowRr: 10 })}
+                    className="text-xs font-bold py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer transition text-center"
+                  >
+                    Geriatric
+                  </button>
+                  <button 
+                    onClick={() => setThresholds({ highHr: 150, lowHr: 70, highRr: 35, lowRr: 14 })}
+                    className="text-xs font-bold py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer transition text-center"
+                  >
+                    Pediatric
+                  </button>
+                </div>
+              </div>
+
+              {/* Audio Chime Demonstration Button */}
+              <div className="pt-2 border-t border-slate-100">
+                <button 
+                  onClick={() => playAlarmChime('high')}
+                  className="w-full py-2.5 bg-rose-50 hover:bg-rose-100 border border-rose-200/80 text-rose-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
+                >
+                  <Volume2 className="w-3.5 h-3.5 text-rose-600" />
+                  Test IEC 60601-1-8 Audio Chime
+                </button>
+              </div>
+
+            </div>
+
+            {/* Modal Footer */}
+            <div className="pt-5 border-t border-slate-100 mt-5">
+              <button 
+                onClick={() => setShowAlarmModal(false)}
+                className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-sm"
+              >
+                Apply & Close
               </button>
             </div>
 
