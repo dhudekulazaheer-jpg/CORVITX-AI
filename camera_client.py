@@ -456,8 +456,10 @@ class CORVITXEdgeClient:
             try:
                 self.ws.send(json.dumps(payload))
             except Exception:
-                print("[WARNING] Wi-Fi Dropped! Triggering Local Hardware Alarm!")
-                winsound.Beep(1000, 1000)  # 1000Hz for 1 second
+                now = time.time()
+                if now - getattr(self, '_last_ws_reconnect_log', 0) > 4.0:
+                    self._last_ws_reconnect_log = now
+                    print("[INFO] Telemetry stream reconnecting...")
                 self.connect_ws()
 
     def _face_box_from_landmarks(self, landmarks, frame_w, frame_h):
