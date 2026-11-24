@@ -1,40 +1,93 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Activity, 
-  AlertTriangle, 
-  HeartPulse, 
-  ShieldAlert, 
-  History, 
-  Users, 
-  CheckCircle2, 
-  XCircle, 
-  RefreshCw, 
-  Stethoscope,
-  Camera,
-  Radio,
-  Sliders,
-  Clock,
-  Layers,
-  Sparkles,
-  FileText,
-  Download,
-  User,
-  X,
-  Calendar,
-  Pill,
-  Check,
-  AlertCircle,
-  SlidersHorizontal,
-  ChevronRight,
-  Volume2,
-  VolumeX,
-  Bell,
-  BellOff
-} from 'lucide-react';
 import { YAxis, ResponsiveContainer, AreaChart, Area } from 'recharts';
 
 const SOCKET_URL = "ws://localhost:8000/ws/dashboard";
 const API_URL = "http://localhost:8000/history";
+
+// ============================================================
+// PURE HTML & CSS BESPOKE CLINICAL ICONS (ZERO UGLY SVG LIBRARIES)
+// ============================================================
+const IconPulse = ({ className = "w-4 h-4 text-rose-500" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2 12h3.5l2.5-7 4 14 3-9 2 4h5" />
+  </svg>
+);
+
+const IconBreathe = ({ className = "w-4 h-4 text-teal-600" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 4v6a6 6 0 0 0 6 6M18 4v6a6 6 0 0 1-6 6M12 16v5M8 21h8" />
+  </svg>
+);
+
+const IconShield = ({ className = "w-4 h-4 text-slate-700" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+  </svg>
+);
+
+const IconViewfinder = ({ className = "w-5 h-5 text-sky-600" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3" />
+    <circle cx="12" cy="12" r="3" />
+    <line x1="12" y1="5" x2="12" y2="7" />
+    <line x1="12" y1="17" x2="12" y2="19" />
+    <line x1="5" y1="12" x2="7" y2="12" />
+    <line x1="17" y1="12" x2="19" y2="12" />
+  </svg>
+);
+
+const IconSoundWave = ({ active = true, className = "text-emerald-600" }) => (
+  <span className={`inline-flex items-center gap-[2px] h-3.5 px-0.5 ${className}`}>
+    <span className={`w-[2.5px] bg-current rounded-full transition-all ${active ? 'h-2 animate-pulse' : 'h-1.5 opacity-50'}`}></span>
+    <span className={`w-[2.5px] bg-current rounded-full transition-all ${active ? 'h-3.5' : 'h-2 opacity-50'}`}></span>
+    <span className={`w-[2.5px] bg-current rounded-full transition-all ${active ? 'h-2.5 animate-pulse' : 'h-1.5 opacity-50'}`}></span>
+  </span>
+);
+
+const IconSliders = ({ className = "w-3.5 h-3.5 text-slate-600" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" />
+    <line x1="12" y1="21" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="3" />
+    <line x1="20" y1="21" x2="20" y2="16" /><line x1="20" y1="12" x2="20" y2="3" />
+    <line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" /><line x1="17" y1="16" x2="23" y2="16" />
+  </svg>
+);
+
+const IconDownload = ({ className = "w-3.5 h-3.5" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="7 10 12 15 17 10" />
+    <line x1="12" y1="15" x2="12" y2="3" />
+  </svg>
+);
+
+const IconActivity = ({ className = "w-3.5 h-3.5 text-sky-600" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+  </svg>
+);
+
+const IconHistory = ({ className = "w-3.5 h-3.5 text-indigo-600" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="9" />
+    <polyline points="12 7 12 12 15 15" />
+  </svg>
+);
+
+const IconUser = ({ className = "w-3.5 h-3.5 text-sky-600" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </svg>
+);
+
+const IconAlert = ({ className = "w-4 h-4 text-rose-500" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2" />
+    <line x1="12" y1="8" x2="12" y2="12" />
+    <line x1="12" y1="16" x2="12.01" y2="16" />
+  </svg>
+);
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('ward'); // 'ward' | 'history'
@@ -295,22 +348,23 @@ export default function App() {
     if (bed.hr_history && bed.hr_history.length > 0) {
       bed.hr_history.forEach((sample, i) => {
         const sampleTime = sample.time ? new Date(sample.time * 1000).toLocaleTimeString() : `T-${bed.hr_history.length - i}s`;
-        csv += `${i + 1},"${sampleTime}",${sample.hr}\r\n`;
+        csv += `${i + 1},"${sampleTime}",${Math.round(sample.hr)}\r\n`;
       });
     } else {
-      csv += `1,"Current",${bed.hr || 0}\r\n`;
+      csv += "1,Live Optical Telemetry Stream,In Progress\r\n";
     }
-    
-    csv += "\r\nEMERGENCY AUDIT DATABASE LOGS FOR THIS BED (SQLITE)\r\n";
-    csv += "Timestamp,Bed_ID,Heart_Rate_BPM,MEWS_Score,Triage_Event\r\n";
+    csv += "\r\n";
+
+    csv += "HISTORICAL WARD EMERGENCY EVENTS (DATABASE LOG)\r\n";
+    csv += "Log_ID,Event_Timestamp,Bed_ID,Heart_Rate_BPM,MEWS_Score,Triage_Protocol_Status\r\n";
     if (bedHistory.length > 0) {
-      bedHistory.forEach(h => {
-        csv += `"${h.timestamp}",${h.bed_id},${h.hr},${h.mews},"${h.status}"\r\n`;
+      bedHistory.forEach((ev, idx) => {
+        csv += `${idx + 1},"${ev.timestamp}",${ev.bed_id},${Math.round(ev.hr)},${ev.mews},"${ev.status}"\r\n`;
       });
     } else {
-      csv += `"N/A",${bed.bed_id},${bed.hr || 0},${bed.mews || 0},"No critical alerts logged for this bed"\r\n`;
+      csv += `None,Current Surveillance Active,Bed #${bed.bed_id},Stable,0,Hemodynamically Stable\r\n`;
     }
-    
+
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -330,17 +384,17 @@ export default function App() {
       {/* ============================================================ */}
       {/* 1. TOP HEALTHKIT NAVIGATION BAR (FROSTED GLASS)              */}
       {/* ============================================================ */}
-      <header className="sticky top-0 z-40 bg-white/85 border-b border-slate-200/80 px-6 py-3.5 backdrop-blur-xl shadow-xs transition-all">
+      <header className="sticky top-0 z-40 bg-white/90 border-b border-slate-200/80 px-6 py-3.5 backdrop-blur-xl shadow-xs transition-all">
         <div className="max-w-[1440px] mx-auto flex flex-wrap items-center justify-between gap-4">
           
           {/* Brand & Hospital Subtitle */}
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 via-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
-              <HeartPulse className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 via-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/25">
+              <IconPulse className="w-5 h-5 text-white" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-lg font-black tracking-tight text-[#0F172A] font-sans">
+                <span className="text-lg font-black tracking-tight text-[#0F172A]">
                   CORVITX<span className="text-sky-600">.AI</span>
                 </span>
                 <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200/80 tracking-wide uppercase">
@@ -350,7 +404,7 @@ export default function App() {
                   ISO-13485
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 font-semibold tracking-wide uppercase">
+              <p className="text-[11px] text-slate-400 font-bold tracking-wider uppercase">
                 Contactless Vision-Based Patient Triage & Vitals Monitoring
               </p>
             </div>
@@ -366,7 +420,7 @@ export default function App() {
                   : 'text-slate-500 hover:text-slate-800'
               }`}
             >
-              <Activity className="w-3.5 h-3.5 text-sky-600" />
+              <IconActivity className="w-3.5 h-3.5 text-sky-600" />
               Patient Command Hub
             </button>
             <button
@@ -377,10 +431,10 @@ export default function App() {
                   : 'text-slate-500 hover:text-slate-800'
               }`}
             >
-              <History className="w-3.5 h-3.5 text-indigo-600" />
+              <IconHistory className="w-3.5 h-3.5 text-indigo-600" />
               Triage Audit Logs
               {history.length > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-slate-200 text-slate-700">
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-slate-200 text-slate-700 font-tabular">
                   {history.length}
                 </span>
               )}
@@ -398,16 +452,16 @@ export default function App() {
                   className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-full text-xs font-bold transition shadow-sm flex items-center gap-1.5 cursor-pointer animate-pulse"
                   title="Silence medical alarm siren for 120 seconds"
                 >
-                  <VolumeX className="w-3.5 h-3.5" />
+                  <span className="w-2 h-2 rounded-full bg-white animate-ping"></span>
                   <span>Silence (120s)</span>
                 </button>
               ) : (
                 <button
                   onClick={cancelSilence}
-                  className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-full text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-full text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer font-tabular"
                   title="Alarm audio silenced. Click to resume siren"
                 >
-                  <Volume2 className="w-3.5 h-3.5" />
+                  <IconSoundWave active={false} className="text-white" />
                   <span>Silenced ({silenceCountdown}s)</span>
                 </button>
               )
@@ -417,17 +471,8 @@ export default function App() {
                 className="px-3.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200/90 text-slate-700 rounded-full text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer hover:border-slate-300"
                 title={audioEnabled ? "Audio monitor armed (click to mute)" : "Audio monitor muted (click to arm)"}
               >
-                {audioEnabled ? (
-                  <>
-                    <Volume2 className="w-3.5 h-3.5 text-emerald-600" />
-                    <span className="hidden sm:inline">Audio Armed</span>
-                  </>
-                ) : (
-                  <>
-                    <VolumeX className="w-3.5 h-3.5 text-slate-400" />
-                    <span className="hidden sm:inline">Audio Muted</span>
-                  </>
-                )}
+                <IconSoundWave active={audioEnabled} className={audioEnabled ? "text-emerald-600" : "text-slate-400"} />
+                <span className="hidden sm:inline font-semibold">{audioEnabled ? "Audio Armed" : "Audio Muted"}</span>
               </button>
             )}
 
@@ -437,7 +482,7 @@ export default function App() {
               className="px-3.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200/90 text-slate-700 rounded-full text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer hover:border-slate-300"
               title="Configure Medical Alarm Limits & Presets"
             >
-              <SlidersHorizontal className="w-3.5 h-3.5 text-slate-600" />
+              <IconSliders className="w-3.5 h-3.5 text-slate-600" />
               <span className="hidden sm:inline">Alarm Limits</span>
             </button>
 
@@ -447,13 +492,13 @@ export default function App() {
               className="px-3.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200/90 text-slate-700 rounded-full text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer hover:border-slate-300"
               title="Download Clinical EMR Triage Report"
             >
-              <Download className="w-3.5 h-3.5 text-sky-600" />
+              <IconDownload className="w-3.5 h-3.5 text-sky-600" />
               <span className="hidden sm:inline">Export EMR Report</span>
             </button>
 
-            <div className="hidden lg:flex items-center gap-2 text-xs font-semibold text-slate-500 bg-white px-3.5 py-1.5 rounded-full border border-slate-200/80 shadow-xs">
-              <Clock className="w-3.5 h-3.5 text-slate-400" />
-              <span className="font-mono">{currentTime}</span>
+            <div className="hidden lg:flex items-center gap-2 text-xs font-bold text-slate-500 bg-white px-3.5 py-1.5 rounded-full border border-slate-200/80 shadow-xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+              <span className="font-mono font-tabular">{currentTime}</span>
             </div>
 
             <button 
@@ -467,7 +512,7 @@ export default function App() {
               <span className="text-sm leading-none font-black">+</span> Add Bed
             </button>
 
-            <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold border transition-colors ${
+            <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-extrabold border transition-colors ${
               connected 
                 ? 'bg-emerald-50 border-emerald-200 text-emerald-700' 
                 : 'bg-rose-50 border-rose-200 text-rose-700'
@@ -490,12 +535,12 @@ export default function App() {
         }`}>
           <div className="max-w-[1440px] mx-auto flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+              <IconAlert className="w-5 h-5 flex-shrink-0 text-white" />
               <div>
                 <span className="text-xs font-black tracking-wide uppercase mr-2">
-                  {isSilenced ? '🔕 ALARM AUDIO SILENCED' : '🚨 CRITICAL TELEMETRY ALARM'}
+                  {isSilenced ? 'ALARM AUDIO SILENCED' : 'CRITICAL TELEMETRY ALARM'}
                 </span>
-                <span className="text-xs font-medium opacity-95">
+                <span className="text-xs font-semibold opacity-95">
                   Bed #{activeBed.bed_id} — {alarmReasons.join(' • ') || 'Abnormal Vitals Detected'}
                 </span>
               </div>
@@ -507,12 +552,12 @@ export default function App() {
                   onClick={() => triggerSilenceAlarm(120)}
                   className="bg-white text-rose-700 hover:bg-rose-50 px-4 py-1.5 rounded-full text-xs font-black transition shadow-sm flex items-center gap-1.5 cursor-pointer"
                 >
-                  <VolumeX className="w-3.5 h-3.5" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
                   Silence Alarm Siren (120s)
                 </button>
               ) : (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono font-bold bg-white/20 px-3 py-1 rounded-full">
+                  <span className="text-xs font-mono font-bold bg-white/20 px-3 py-1 rounded-full font-tabular">
                     Silenced: {silenceCountdown}s remaining
                   </span>
                   <button
@@ -531,7 +576,7 @@ export default function App() {
       {/* Export Success Toast Notification */}
       {exportSuccess && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-bounce">
-          <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+          <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold">✓</span>
           <span className="text-xs font-bold">EMR Clinical Report Exported to CSV!</span>
         </div>
       )}
@@ -547,18 +592,18 @@ export default function App() {
         {activeTab === 'ward' && (
           <div className="space-y-6">
 
-            {/* Critical Emergency Banner */}
+            {/* Critical Patient Strobe Alert Banner */}
             {hasCritical && (
-              <div className="bg-rose-50/90 border-2 border-rose-200 rounded-3xl p-5 shadow-lg shadow-rose-500/5 flex items-center justify-between animate-pulse">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-rose-100 rounded-2xl text-rose-600 shadow-sm">
-                    <AlertTriangle className="w-6 h-6" />
+              <div className="bg-rose-50 border-2 border-rose-200/90 rounded-3xl p-5 shadow-sm flex items-center justify-between gap-4 animate-pulse">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-10 h-10 rounded-2xl bg-rose-100 flex items-center justify-center text-rose-600">
+                    <IconAlert className="w-5 h-5 text-rose-600" />
                   </div>
                   <div>
-                    <h2 className="text-base font-black text-rose-950 uppercase tracking-wide">
-                      Critical Clinical Emergency Alert
+                    <h2 className="text-sm font-extrabold text-rose-950 uppercase tracking-wide">
+                      Clinical Triage Threshold Warning Alert
                     </h2>
-                    <p className="text-xs text-rose-800 font-medium mt-0.5">
+                    <p className="text-xs text-rose-800 font-semibold mt-0.5">
                       {customHrViolation 
                         ? `Custom Heart Rate Alarm Triggered: ${Math.round(activeBed.hr)} BPM exceeds threshold limits (${thresholds.lowHr} - ${thresholds.highHr} BPM)!` 
                         : "MEWS score exceeded critical threshold (>=5), Apnea detected, or Bed-Exit displacement occurring."}
@@ -576,66 +621,66 @@ export default function App() {
               
               <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-[0_2px_15px_-3px_rgba(15,23,42,0.04)] flex items-center justify-between">
                 <div>
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Monitored Ward</span>
+                  <span className="label-clinical text-slate-400 block">Monitored Ward</span>
                   <div className="flex items-baseline gap-1 mt-1">
-                    <span className="text-2xl font-black text-[#0F172A] font-sans tracking-tight">{safeBeds.length || 1}</span>
+                    <span className="text-2xl font-black text-[#0F172A] tracking-tight font-tabular">{safeBeds.length || 1}</span>
                     <span className="text-xs font-bold text-slate-400">Beds Active</span>
                   </div>
-                  <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1 mt-1">
-                    <CheckCircle2 className="w-3 h-3" /> All Node Sensors Online
+                  <span className="text-[11px] font-bold text-emerald-600 flex items-center gap-1.5 mt-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> All Nodes Online
                   </span>
                 </div>
                 <div className="w-12 h-12 rounded-2xl bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-600">
-                  <Activity className="w-6 h-6" />
+                  <IconActivity className="w-5 h-5 text-sky-600" />
                 </div>
               </div>
 
               <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-[0_2px_15px_-3px_rgba(15,23,42,0.04)] flex items-center justify-between">
                 <div>
-                  <span className="text-[11px] font-bold text-rose-500 uppercase tracking-wider block">Average Heart Rate</span>
+                  <span className="label-clinical text-rose-500 block">Average Heart Rate</span>
                   <div className="flex items-baseline gap-1 mt-1">
-                    <span className="text-2xl font-black text-[#0F172A] font-sans tracking-tight">{avgHr || '--'}</span>
+                    <span className="text-2xl font-black text-[#0F172A] tracking-tight font-tabular">{avgHr || '--'}</span>
                     <span className="text-xs font-bold text-rose-500">BPM</span>
                   </div>
-                  <span className="text-[11px] font-semibold text-slate-400 mt-1 block">
+                  <span className="text-[11px] font-bold text-slate-400 mt-1 block">
                     Normal Sinus Rhythm
                   </span>
                 </div>
                 <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-500">
-                  <HeartPulse className="w-6 h-6" />
+                  <IconPulse className="w-6 h-6 text-rose-500" />
                 </div>
               </div>
 
               <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-[0_2px_15px_-3px_rgba(15,23,42,0.04)] flex items-center justify-between">
                 <div>
-                  <span className="text-[11px] font-bold text-teal-700 uppercase tracking-wider block">Respiration Mean</span>
+                  <span className="label-clinical text-teal-700 block">Respiration Mean</span>
                   <div className="flex items-baseline gap-1 mt-1">
-                    <span className="text-2xl font-black text-[#0F172A] font-sans tracking-tight">{avgRr || '--'}</span>
+                    <span className="text-2xl font-black text-[#0F172A] tracking-tight font-tabular">{avgRr || '--'}</span>
                     <span className="text-xs font-bold text-teal-600">RPM</span>
                   </div>
-                  <span className="text-[11px] font-semibold text-slate-400 mt-1 block">
+                  <span className="text-[11px] font-bold text-slate-400 mt-1 block">
                     Chrominance Optical Flow
                   </span>
                 </div>
                 <div className="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-700">
-                  <Stethoscope className="w-6 h-6" />
+                  <IconBreathe className="w-6 h-6 text-teal-600" />
                 </div>
               </div>
 
               <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-[0_2px_15px_-3px_rgba(15,23,42,0.04)] flex items-center justify-between">
                 <div>
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Ward Triage State</span>
+                  <span className="label-clinical text-slate-400 block">Ward Triage State</span>
                   <div className="flex items-baseline gap-1 mt-1">
-                    <span className={`text-2xl font-black font-sans tracking-tight ${criticalCount > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                    <span className={`text-2xl font-black tracking-tight font-tabular ${criticalCount > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
                       {criticalCount > 0 ? `${criticalCount} Critical` : 'Stable (Low)'}
                     </span>
                   </div>
-                  <span className="text-[11px] font-semibold text-slate-400 mt-1 block">
+                  <span className="text-[11px] font-bold text-slate-400 mt-1 block">
                     MEWS Protocol Validated
                   </span>
                 </div>
                 <div className={`w-12 h-12 rounded-2xl border flex items-center justify-center ${criticalCount > 0 ? 'bg-rose-50 border-rose-100 text-rose-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'}`}>
-                  <ShieldAlert className="w-6 h-6" />
+                  <IconShield className={`w-6 h-6 ${criticalCount > 0 ? 'text-rose-600' : 'text-emerald-600'}`} />
                 </div>
               </div>
 
@@ -661,7 +706,7 @@ export default function App() {
                   {/* Card Title & Bed Details */}
                   <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-6 border-b border-slate-100">
                     <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-sky-500 to-teal-400 flex items-center justify-center text-white shadow-md shadow-sky-500/20 font-black text-xl font-mono">
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-sky-500 to-teal-400 flex items-center justify-center text-white shadow-md shadow-sky-500/20 font-black text-xl font-mono font-tabular">
                         #{activeBed.bed_id}
                       </div>
                       <div>
@@ -681,18 +726,18 @@ export default function App() {
 
                           {/* Dynamic Alarm Strobe Badge */}
                           {isAlarmActive && (
-                            <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border flex items-center gap-1 ${
+                            <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border flex items-center gap-1.5 ${
                               isSilenced 
                                 ? 'bg-amber-50 text-amber-800 border-amber-300' 
                                 : 'bg-rose-100 text-rose-800 border-rose-300 animate-pulse'
                             }`}>
-                              {isSilenced ? <BellOff className="w-3 h-3 text-amber-700" /> : <Bell className="w-3 h-3 text-rose-700" />}
+                              <span className={`w-2 h-2 rounded-full ${isSilenced ? 'bg-amber-500' : 'bg-rose-600'}`}></span>
                               {isSilenced ? `Silenced (${silenceCountdown}s)` : 'Alarm Active'}
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-slate-400 font-semibold mt-0.5">
-                          Patient: Zaheer D. (21M) • ID: CORVITX-P{String(activeBed.bed_id).padStart(4, '0')} • Room: ICU-Bay A
+                        <p className="text-xs text-slate-400 font-bold mt-0.5">
+                          Patient: Zaheer D. (21M) • ID: <span className="font-mono">CORVITX-P{String(activeBed.bed_id).padStart(4, '0')}</span> • Room: ICU-Bay A
                         </p>
                       </div>
                     </div>
@@ -703,7 +748,7 @@ export default function App() {
                         onClick={() => setShowEhrDrawer(true)}
                         className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5"
                       >
-                        <User className="w-3.5 h-3.5 text-sky-600" />
+                        <IconUser className="w-3.5 h-3.5 text-sky-600" />
                         Patient EHR Profile
                       </button>
 
@@ -713,7 +758,7 @@ export default function App() {
                         className="px-3.5 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5"
                         title="Download CSV Clinical Report"
                       >
-                        <Download className="w-3.5 h-3.5" />
+                        <IconDownload className="w-3.5 h-3.5" />
                         Export
                       </button>
                     </div>
@@ -729,20 +774,21 @@ export default function App() {
                         : 'bg-gradient-to-br from-rose-50/80 via-rose-50/20 to-white border-rose-100'
                     }`}>
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-[11px] font-bold text-rose-500 tracking-wider uppercase">Heart Rate</span>
-                        <div className="p-2 rounded-xl bg-rose-100/70 text-rose-600">
-                          <HeartPulse className="w-4 h-4" />
+                        <span className="label-clinical text-rose-500">Heart Rate</span>
+                        <div className="p-2 rounded-xl bg-rose-100/70 text-rose-600 relative">
+                          <IconPulse className="w-4 h-4 text-rose-600" />
+                          <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span>
                         </div>
                       </div>
                       <div className="flex items-baseline gap-1 mt-1">
-                        <span className="text-4xl font-black text-[#0F172A] tracking-tight font-sans">
+                        <span className="text-4xl font-black text-[#0F172A] tracking-tight font-tabular">
                           {activeBed.hr ? Math.round(activeBed.hr) : '--'}
                         </span>
                         <span className="text-sm font-bold text-rose-500 ml-1">BPM</span>
                       </div>
                       <div className="mt-3 pt-3 border-t border-rose-100/70 flex items-center justify-between text-[11px] text-slate-500">
-                        <span>Threshold: {thresholds.lowHr} - {thresholds.highHr}</span>
-                        <span className="font-semibold text-rose-600">POS rPPG</span>
+                        <span className="font-tabular font-medium">Limits: {thresholds.lowHr} - {thresholds.highHr}</span>
+                        <span className="font-bold text-rose-600">POS rPPG</span>
                       </div>
                     </div>
 
@@ -753,33 +799,33 @@ export default function App() {
                         : 'bg-gradient-to-br from-teal-50/80 via-teal-50/20 to-white border-teal-100'
                     }`}>
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-[11px] font-bold text-teal-700 tracking-wider uppercase">Respiration</span>
+                        <span className="label-clinical text-teal-700">Respiration</span>
                         <div className="p-2 rounded-xl bg-teal-100/70 text-teal-700">
-                          <Stethoscope className="w-4 h-4" />
+                          <IconBreathe className="w-4 h-4 text-teal-600 animate-breathe" />
                         </div>
                       </div>
                       <div className="flex items-baseline gap-1 mt-1">
-                        <span className="text-4xl font-black text-[#0F172A] tracking-tight font-sans">
+                        <span className="text-4xl font-black text-[#0F172A] tracking-tight font-tabular">
                           {activeBed.rr ? Math.round(activeBed.rr) : '--'}
                         </span>
                         <span className="text-sm font-bold text-teal-600 ml-1">RPM</span>
                       </div>
                       <div className="mt-3 pt-3 border-t border-teal-100/70 flex items-center justify-between text-[11px] text-slate-500">
-                        <span>Threshold: {thresholds.lowRr} - {thresholds.highRr}</span>
-                        <span className="font-semibold text-teal-700">Green Channel</span>
+                        <span className="font-tabular font-medium">Limits: {thresholds.lowRr} - {thresholds.highRr}</span>
+                        <span className="font-bold text-teal-700">Green Channel</span>
                       </div>
                     </div>
 
                     {/* MEWS Score Tile */}
                     <div className="bg-gradient-to-br from-slate-50 to-white rounded-3xl p-5 border border-slate-200/80 shadow-2xs">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-[11px] font-bold text-slate-500 tracking-wider uppercase">MEWS Score</span>
+                        <span className="label-clinical text-slate-500">MEWS Score</span>
                         <div className="p-2 rounded-xl bg-slate-100 text-slate-700">
-                          <ShieldAlert className="w-4 h-4" />
+                          <IconShield className="w-4 h-4 text-slate-700" />
                         </div>
                       </div>
                       <div className="flex items-baseline gap-1 mt-1">
-                        <span className={`text-4xl font-black tracking-tight font-sans ${
+                        <span className={`text-4xl font-black tracking-tight font-tabular ${
                           activeBed.mews >= 5 ? 'text-rose-600' : activeBed.mews >= 3 ? 'text-amber-600' : 'text-[#0F172A]'
                         }`}>
                           {activeBed.mews ?? 0}
@@ -787,7 +833,7 @@ export default function App() {
                         <span className="text-sm font-bold text-slate-400 ml-1">/ 14</span>
                       </div>
                       <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                        <span>Clinical Triage</span>
+                        <span className="font-medium">Clinical Triage</span>
                         <span className={`font-bold px-2 py-0.5 rounded-full text-[10px] ${
                           activeBed.mews >= 5 
                             ? 'bg-rose-100 text-rose-800' 
@@ -802,17 +848,17 @@ export default function App() {
 
                   </div>
 
-                  {/* Clean Camera Sensor & Fallback Information Tile */}
+                  {/* Clean Optical Viewfinder Sensor Information Tile */}
                   <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/80 flex flex-wrap items-center justify-between gap-4 mb-6">
                     <div className="flex items-center gap-3">
-                      <div className="p-2.5 rounded-xl bg-white border border-slate-200 text-sky-600 shadow-2xs">
-                        <Camera className="w-5 h-5" />
+                      <div className="p-2.5 rounded-xl bg-white border border-slate-200 text-sky-600 shadow-2xs flex items-center justify-center">
+                        <IconViewfinder className="w-5 h-5 text-sky-600" />
                       </div>
                       <div>
-                        <h4 className="text-xs font-bold text-[#0F172A] uppercase tracking-wider">
-                          Optical Sensor Tracking Channel
+                        <h4 className="text-xs font-extrabold text-[#0F172A] uppercase tracking-wider">
+                          Optical Viewfinder Tracking Channel
                         </h4>
-                        <p className="text-[11px] text-slate-500 mt-0.5">
+                        <p className="text-[11px] text-slate-500 font-medium mt-0.5">
                           {activeBed.status && activeBed.status.includes("Secondary ROI")
                             ? "Active Channel: Cutaneous Neck ROI (Carotid pulse fallback when head is turned)"
                             : "Active Channel: Frontal Facial Triangle & Mid-Forehead rPPG Region"}
@@ -821,10 +867,10 @@ export default function App() {
                     </div>
                     
                     <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-mono font-bold bg-white px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600">
+                      <span className="text-[11px] font-mono font-bold bg-white px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 font-tabular">
                         Resolution: 1280&times;720 @ 30FPS
                       </span>
-                      <span className="text-[11px] font-mono font-bold bg-white px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600">
+                      <span className="text-[11px] font-mono font-bold bg-white px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 font-tabular">
                         Buffer: 10s Window
                       </span>
                     </div>
@@ -835,11 +881,11 @@ export default function App() {
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                        <h4 className="label-clinical text-slate-600">
                           Continuous Cardiac Blood-Volume Pulse (PPG Sweep Waveform)
                         </h4>
                       </div>
-                      <span className="text-[11px] font-mono font-bold text-slate-400">
+                      <span className="text-[11px] font-mono font-bold text-slate-400 font-tabular">
                         {activeBed.hr ? `${Math.round(activeBed.hr)} BPM Instantaneous Peak` : 'Buffering Signal...'}
                       </span>
                     </div>
@@ -849,27 +895,26 @@ export default function App() {
                         <ResponsiveContainer width="100%" height="100%">
                           <AreaChart data={activeBed.hr_history.map((h, i) => ({ index: i, hr: h.hr }))}>
                             <defs>
-                              <linearGradient id="applePulse" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#F43F5E" stopOpacity={0.25}/>
-                                <stop offset="95%" stopColor="#F43F5E" stopOpacity={0.0}/>
+                              <linearGradient id="appleRoseWave" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#F43F5E" stopOpacity={0.25} />
+                                <stop offset="95%" stopColor="#F43F5E" stopOpacity={0.0} />
                               </linearGradient>
                             </defs>
-                            <YAxis domain={['dataMin - 6', 'dataMax + 6']} hide={true} />
+                            <YAxis domain={['dataMin - 5', 'dataMax + 5']} hide />
                             <Area 
                               type="monotone" 
                               dataKey="hr" 
                               stroke="#F43F5E" 
-                              strokeWidth={3} 
-                              fillOpacity={1} 
-                              fill="url(#applePulse)" 
-                              isAnimationActive={false}
+                              strokeWidth={2.5} 
+                              fill="url(#appleRoseWave)" 
+                              isAnimationActive={false} 
                             />
                           </AreaChart>
                         </ResponsiveContainer>
                       ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center text-xs font-semibold text-slate-400">
-                          <Activity className="w-5 h-5 text-slate-300 mb-1 animate-pulse" />
-                          Acquiring Chrominance Waveform (10-Second Rolling Window)...
+                        <div className="h-full flex items-center justify-center text-slate-400 font-medium text-xs">
+                          <span className="inline-block w-2 h-2 rounded-full bg-rose-400 animate-ping mr-2"></span>
+                          Synchronizing Photoplethysmogram Telemetry Channel...
                         </div>
                       )}
                     </div>
@@ -880,30 +925,29 @@ export default function App() {
               </div>
 
               {/* ===================================================== */}
-              {/* RIGHT: WARD BED ROSTER & FEATURE 4 SLIDERS (4 COLS)   */}
+              {/* RIGHT: WARD ROSTER & COMPACT ALARM PROTOCOL (4 COLS)  */}
               {/* ===================================================== */}
               <div className="lg:col-span-4 space-y-6">
                 
-                {/* Ward Quick Selector */}
+                {/* Ward Beds Card */}
                 <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-[0_4px_25px_-4px_rgba(15,23,42,0.05)]">
                   <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-                    <div className="flex items-center gap-2">
-                      <Layers className="w-4 h-4 text-sky-600" />
-                      <h3 className="text-sm font-bold text-[#0F172A] uppercase tracking-wider">
-                        Active Ward Beds ({safeBeds.length || 1})
+                    <div>
+                      <h3 className="text-sm font-extrabold text-[#0F172A] uppercase tracking-wider">
+                        Active Ward Beds
                       </h3>
+                      <p className="text-[11px] text-slate-400 font-semibold mt-0.5">Click any bed to focus telemetry</p>
                     </div>
-                    <span className="text-[11px] text-slate-400 font-semibold">Click to Focus</span>
+                    <span className="text-[10px] font-extrabold text-sky-700 bg-sky-50 px-2.5 py-0.5 rounded-full border border-sky-200 uppercase font-tabular">
+                      {safeBeds.length || 1} Registered
+                    </span>
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-2.5">
                     {safeBeds.length === 0 ? (
-                      <div 
-                        onClick={() => setSelectedBedId(1)}
-                        className="p-4 rounded-2xl border bg-sky-50/70 border-sky-300 shadow-sm transition-all cursor-pointer flex items-center justify-between"
-                      >
+                      <div className="p-4 rounded-2xl bg-sky-50/70 border border-sky-200 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-sky-600 text-white flex items-center justify-center font-bold font-mono text-sm">
+                          <div className="w-10 h-10 rounded-xl bg-sky-600 text-white flex items-center justify-center font-bold font-mono text-sm font-tabular">
                             #1
                           </div>
                           <div>
@@ -914,8 +958,8 @@ export default function App() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <span className="text-base font-black text-[#0F172A] font-mono block">
-                            -- <span className="text-[10px] text-rose-500 font-bold">BPM</span>
+                          <span className="text-base font-black text-[#0F172A] font-mono block font-tabular">
+                            -- <span className="text-[10px] text-rose-500 font-bold font-sans">BPM</span>
                           </span>
                         </div>
                       </div>
@@ -933,7 +977,7 @@ export default function App() {
                             }`}
                           >
                             <div className="flex items-center gap-3">
-                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold font-mono text-sm ${
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold font-mono text-sm font-tabular ${
                                 isSelected ? 'bg-sky-600 text-white' : 'bg-white border border-slate-200 text-slate-700'
                               }`}>
                                 #{b.bed_id}
@@ -947,10 +991,10 @@ export default function App() {
                             </div>
 
                             <div className="text-right">
-                              <span className="text-base font-black text-[#0F172A] font-mono block">
-                                {b.hr ? Math.round(b.hr) : '--'} <span className="text-[10px] text-rose-500 font-bold">BPM</span>
+                              <span className="text-base font-black text-[#0F172A] font-mono block font-tabular">
+                                {b.hr ? Math.round(b.hr) : '--'} <span className="text-[10px] text-rose-500 font-bold font-sans">BPM</span>
                               </span>
-                              <span className="text-[11px] font-semibold text-teal-600 font-mono">
+                              <span className="text-[11px] font-semibold text-teal-600 font-mono font-tabular">
                                 {b.rr ? Math.round(b.rr) : '--'} RPM
                               </span>
                             </div>
@@ -961,14 +1005,12 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* ============================================================ */}
-                {/* OPTION A: COMPACT ICU ALARM PROTOCOL OVERVIEW CARD           */}
-                {/* ============================================================ */}
+                {/* Compact ICU Alarm Protocol Overview Card */}
                 <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-[0_4px_25px_-4px_rgba(15,23,42,0.05)]">
                   <div className="flex items-center justify-between mb-3 pb-3 border-b border-slate-100">
                     <div className="flex items-center gap-2">
-                      <SlidersHorizontal className="w-4 h-4 text-slate-700" />
-                      <h3 className="text-xs font-bold text-[#0F172A] uppercase tracking-wider">
+                      <IconSliders className="w-4 h-4 text-slate-700" />
+                      <h3 className="label-clinical text-[#0F172A]">
                         Alarm Protocol & Limits
                       </h3>
                     </div>
@@ -976,21 +1018,21 @@ export default function App() {
                       onClick={() => setShowAlarmModal(true)}
                       className="text-[11px] font-bold text-sky-600 bg-sky-50 hover:bg-sky-100 px-3 py-1 rounded-full border border-sky-200 transition cursor-pointer flex items-center gap-1"
                     >
-                      <span>⚙️ Tune Limits</span>
+                      <span>Tune Limits</span>
                     </button>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="bg-slate-50/80 p-3 rounded-2xl border border-slate-100">
-                      <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Heart Rate Limits</span>
-                      <span className="font-mono font-black text-slate-800 text-sm mt-0.5 block">
+                      <span className="label-clinical text-slate-400 block">Heart Rate Limits</span>
+                      <span className="font-mono font-black text-slate-800 text-sm mt-0.5 block font-tabular">
                         {thresholds.lowHr} – {thresholds.highHr} <span className="text-[10px] text-rose-500 font-sans font-bold">BPM</span>
                       </span>
                     </div>
 
                     <div className="bg-slate-50/80 p-3 rounded-2xl border border-slate-100">
-                      <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Respiration Limits</span>
-                      <span className="font-mono font-black text-slate-800 text-sm mt-0.5 block">
+                      <span className="label-clinical text-slate-400 block">Respiration Limits</span>
+                      <span className="font-mono font-black text-slate-800 text-sm mt-0.5 block font-tabular">
                         {thresholds.lowRr} – {thresholds.highRr} <span className="text-[10px] text-teal-600 font-sans font-bold">RPM</span>
                       </span>
                     </div>
@@ -1006,7 +1048,7 @@ export default function App() {
                       className="text-rose-600 hover:text-rose-700 font-bold hover:underline cursor-pointer flex items-center gap-1 text-[11px]"
                       title="Test Audio Siren"
                     >
-                      <Volume2 className="w-3.5 h-3.5" /> Test Siren
+                      <IconSoundWave active={true} className="text-rose-500" /> Test Siren
                     </button>
                   </div>
                 </div>
@@ -1025,28 +1067,28 @@ export default function App() {
           <div className="bg-white rounded-3xl border border-slate-200/80 shadow-[0_4px_25px_-4px_rgba(15,23,42,0.05)] overflow-hidden">
             <div className="p-6 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="p-3 rounded-2xl bg-slate-100 text-slate-700">
-                  <History className="w-5 h-5" />
+                <div className="p-3 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100">
+                  <IconHistory className="w-5 h-5 text-indigo-600" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 uppercase tracking-wide">
-                    Clinical Triage Emergency Logs
+                  <h3 className="text-lg font-black text-[#0F172A] tracking-tight">
+                    SQLite Triage Audit & MEWS Event History
                   </h3>
-                  <p className="text-xs text-slate-400">
-                    Comprehensive audit trail stored in SQLite database
+                  <p className="text-xs text-slate-400 font-medium mt-0.5">
+                    Immutable persistent clinical surveillance logs stored in triage_history.db
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              
+              <div className="flex items-center gap-2">
                 <button 
-                  onClick={() => exportClinicalReport(activeBed)}
-                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm"
+                  onClick={fetchHistory}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
                 >
-                  <Download className="w-3.5 h-3.5" />
-                  Download Full Log Report
+                  Refresh Logs
                 </button>
-                <span className="text-xs font-mono font-bold text-slate-500 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
-                  {history.length} Critical Events Logged
+                <span className="px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold font-tabular">
+                  {history.length} Critical Events Captured
                 </span>
               </div>
             </div>
@@ -1072,10 +1114,10 @@ export default function App() {
                   ) : (
                     history.map((row, i) => (
                       <tr key={i} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="px-6 py-4 font-mono text-slate-500">{row.timestamp}</td>
+                        <td className="px-6 py-4 font-mono text-slate-500 font-tabular">{row.timestamp}</td>
                         <td className="px-6 py-4 font-bold text-slate-800">Bed #{row.bed_id}</td>
-                        <td className="px-6 py-4 text-rose-600 font-bold font-mono">{Math.round(row.hr)} BPM</td>
-                        <td className="px-6 py-4 font-bold text-slate-800 font-mono">{row.mews} / 14</td>
+                        <td className="px-6 py-4 text-rose-600 font-bold font-mono font-tabular">{Math.round(row.hr)} BPM</td>
+                        <td className="px-6 py-4 font-bold text-slate-800 font-mono font-tabular">{row.mews} / 14</td>
                         <td className="px-6 py-4">
                           <span className="px-3 py-1 bg-rose-50 text-rose-700 border border-rose-200 rounded-full text-xs font-bold uppercase tracking-wide">
                             {row.status}
@@ -1104,18 +1146,18 @@ export default function App() {
               <div className="flex items-center justify-between pb-5 border-b border-slate-100">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 rounded-2xl bg-sky-50 text-sky-600 border border-sky-100">
-                    <User className="w-5 h-5" />
+                    <IconUser className="w-5 h-5 text-sky-600" />
                   </div>
                   <div>
                     <h3 className="text-lg font-black text-slate-900 tracking-tight">Electronic Health Record (EHR)</h3>
-                    <p className="text-xs text-slate-400 font-medium">Hospital Patient Master Index • Bed #{activeBed.bed_id}</p>
+                    <p className="text-xs text-slate-400 font-bold">Hospital Patient Master Index • Bed #{activeBed.bed_id}</p>
                   </div>
                 </div>
                 <button 
                   onClick={() => setShowEhrDrawer(false)}
-                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition cursor-pointer"
+                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold text-base flex items-center justify-center transition cursor-pointer"
                 >
-                  <X className="w-4 h-4" />
+                  &times;
                 </button>
               </div>
 
@@ -1129,9 +1171,9 @@ export default function App() {
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-xs font-bold text-slate-600">21 Yrs • Male</span>
                     <span className="text-slate-300">•</span>
-                    <span className="text-xs font-bold text-rose-600 bg-white px-2 py-0.5 rounded-full border border-rose-200 font-mono">Blood: O+</span>
+                    <span className="text-xs font-bold text-rose-600 bg-white px-2 py-0.5 rounded-full border border-rose-200 font-mono font-tabular">Blood: O+</span>
                   </div>
-                  <span className="text-[11px] font-mono text-slate-400 mt-1 block">MRN: #CORVITX-9042-2026</span>
+                  <span className="text-[11px] font-mono text-slate-400 mt-1 block font-tabular">MRN: #CORVITX-9042-2026</span>
                 </div>
               </div>
 
@@ -1139,7 +1181,7 @@ export default function App() {
               <div className="mt-6 space-y-4">
                 
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Admission Diagnosis</span>
+                  <span className="label-clinical text-slate-400 block mb-1">Admission Diagnosis</span>
                   <p className="text-sm font-bold text-slate-800">
                     Post-Operative Pulmonary Surveillance & Autonomous Hemodynamic Monitoring
                   </p>
@@ -1148,20 +1190,20 @@ export default function App() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Attending Physician</span>
+                    <span className="label-clinical text-slate-400 block mb-1">Attending Physician</span>
                     <p className="text-xs font-bold text-slate-800">Dr. Sarah Vance, MD</p>
-                    <span className="text-[10px] text-slate-500">Chief Intensivist (Critical Care)</span>
+                    <span className="text-[10px] text-slate-500 font-medium">Chief Intensivist (Critical Care)</span>
                   </div>
 
                   <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Primary Care Nurse</span>
+                    <span className="label-clinical text-slate-400 block mb-1">Primary Care Nurse</span>
                     <p className="text-xs font-bold text-slate-800">Staff Nurse Wilson, RN</p>
-                    <span className="text-[10px] text-slate-500">ICU Telemetry Station</span>
+                    <span className="text-[10px] text-slate-500 font-medium">ICU Telemetry Station</span>
                   </div>
                 </div>
 
                 <div className="p-4 rounded-2xl bg-rose-50/60 border border-rose-100">
-                  <span className="text-[11px] font-bold text-rose-500 uppercase tracking-wider block mb-1">Allergies & Contraindications</span>
+                  <span className="label-clinical text-rose-500 block mb-1">Allergies & Contraindications</span>
                   <div className="flex flex-wrap gap-1.5 mt-1">
                     <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-white text-rose-700 border border-rose-200">
                       Penicillin (Moderate Rash)
@@ -1173,18 +1215,18 @@ export default function App() {
                 </div>
 
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Active Medical Orders</span>
-                  <ul className="text-xs space-y-1.5 text-slate-700 mt-2 font-medium">
+                  <span className="label-clinical text-slate-400 block mb-1">Active Medical Orders</span>
+                  <ul className="text-xs space-y-2 text-slate-700 mt-2 font-medium">
                     <li className="flex items-center gap-2">
-                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-black">✓</span>
                       Continuous Contactless rPPG Telemetry Protocol
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-black">✓</span>
                       Cefazolin 1g IV Q8H (Post-op Prophylaxis)
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-black">✓</span>
                       Normal Saline 0.9% IV @ 75 mL/hr
                     </li>
                   </ul>
@@ -1199,7 +1241,7 @@ export default function App() {
                 onClick={() => exportClinicalReport(activeBed)}
                 className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-md"
               >
-                <Download className="w-4 h-4" />
+                <IconDownload className="w-4 h-4" />
                 Export Full EHR Record (CSV)
               </button>
               <button 
@@ -1225,22 +1267,22 @@ export default function App() {
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-600">
-                  <SlidersHorizontal className="w-5 h-5" />
+                  <IconSliders className="w-5 h-5 text-sky-600" />
                 </div>
                 <div>
                   <h3 className="text-base font-black text-[#0F172A] tracking-tight">
                     Alarm Threshold Config
                   </h3>
-                  <p className="text-[11px] text-slate-400 font-semibold">
+                  <p className="text-[11px] text-slate-400 font-bold">
                     IEC 60601-1-8 Telemetry Siren Limits
                   </p>
                 </div>
               </div>
               <button 
                 onClick={() => setShowAlarmModal(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center cursor-pointer transition"
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-base flex items-center justify-center cursor-pointer transition"
               >
-                <X className="w-4 h-4" />
+                &times;
               </button>
             </div>
 
@@ -1250,7 +1292,7 @@ export default function App() {
               <div>
                 <div className="flex justify-between items-center text-xs mb-1.5">
                   <span className="font-bold text-slate-700">Tachycardia Alert (High HR)</span>
-                  <span className="font-mono font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">
+                  <span className="font-mono font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200 font-tabular">
                     &gt; {thresholds.highHr} BPM
                   </span>
                 </div>
@@ -1268,7 +1310,7 @@ export default function App() {
               <div>
                 <div className="flex justify-between items-center text-xs mb-1.5">
                   <span className="font-bold text-slate-700">Bradycardia Alert (Low HR)</span>
-                  <span className="font-mono font-bold text-sky-600 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-200">
+                  <span className="font-mono font-bold text-sky-600 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-200 font-tabular">
                     &lt; {thresholds.lowHr} BPM
                   </span>
                 </div>
@@ -1286,7 +1328,7 @@ export default function App() {
               <div>
                 <div className="flex justify-between items-center text-xs mb-1.5">
                   <span className="font-bold text-slate-700">Tachypnea Alert (High Resp)</span>
-                  <span className="font-mono font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
+                  <span className="font-mono font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200 font-tabular">
                     &gt; {thresholds.highRr} RPM
                   </span>
                 </div>
@@ -1304,7 +1346,7 @@ export default function App() {
               <div>
                 <div className="flex justify-between items-center text-xs mb-1.5">
                   <span className="font-bold text-slate-700">Bradypnea / Apnea Limit</span>
-                  <span className="font-mono font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                  <span className="font-mono font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 font-tabular">
                     &lt; {thresholds.lowRr} RPM
                   </span>
                 </div>
@@ -1320,7 +1362,7 @@ export default function App() {
 
               {/* Preset Buttons */}
               <div>
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+                <span className="label-clinical text-slate-400 block mb-2">
                   Clinical Ward Presets
                 </span>
                 <div className="grid grid-cols-3 gap-2">
@@ -1349,9 +1391,9 @@ export default function App() {
               <div className="pt-2 border-t border-slate-100">
                 <button 
                   onClick={() => playAlarmChime('high')}
-                  className="w-full py-2.5 bg-rose-50 hover:bg-rose-100 border border-rose-200/80 text-rose-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
+                  className="w-full py-2.5 bg-rose-50 hover:bg-rose-100 border border-rose-200/80 text-rose-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-2xs font-semibold"
                 >
-                  <Volume2 className="w-3.5 h-3.5 text-rose-600" />
+                  <IconSoundWave active={true} className="text-rose-600" />
                   Test IEC 60601-1-8 Audio Chime
                 </button>
               </div>
