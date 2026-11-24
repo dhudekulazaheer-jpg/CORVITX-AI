@@ -9,6 +9,7 @@ import threading
 import requests
 import winsound  # Added for Feature 7 (Physical Audible Alarm on Wi-Fi Drop)
 import os
+import sys
 import csv
 import argparse
 from study_data_manager import log_real_research_session, calculate_real_study_statistics
@@ -693,8 +694,15 @@ class CORVITXEdgeClient:
                 print(f"[INFO] Connecting to Mobile IP Stream: {cam_input} ...")
             cap = cv2.VideoCapture(cam_input)
 
+        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+        cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1.0)
+        cap.set(cv2.CAP_PROP_BACKLIGHT, 1.0)
+
+        # Sensor warm-up to let auto-exposure and gain converge
+        for _ in range(8):
+            cap.read()
 
         prev_time = time.time()
         frame_count = 0
@@ -716,6 +724,22 @@ class CORVITXEdgeClient:
                 
             h, w = frame.shape[:2]
 
+            # REAL-TIME ADAPTIVE TONE MAPPING (Matches Windows Camera App):
+            # In backlit or dim conditions, laptops underexpose the face.
+            # We lift luminance in LAB color space so the camera view is as bright,
+            # sharp, and vibrant as the Windows Camera app!
+            lab = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
+            l_channel, a_channel, b_channel = cv2.split(lab)
+            l_mean = float(np.mean(l_channel))
+            if l_mean < 115:
+                clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
+                cl = clahe.apply(l_channel)
+                gamma = min(2.8, max(1.0, 125.0 / max(l_mean, 15.0)))
+                inv_gamma = 1.0 / gamma
+                lut = np.array([((i / 255.0) ** inv_gamma) * 255 for i in range(256)]).astype('uint8')
+                cl_gamma = cv2.LUT(cl, lut)
+                frame = cv2.cvtColor(cv2.merge((cl_gamma, a_channel, b_channel)), cv2.COLOR_LAB2BGR)
+
             delta = curr_time - prev_time
             prev_time = curr_time
             self.fps = 0.9 * self.fps + 0.1 * (1.0 / delta if delta > 0 else 30.0)
@@ -727,27 +751,26 @@ class CORVITXEdgeClient:
             for slot in self.beds.values():
                 slot.fall_risk = False
             
-            # Detect candidate faces using primary and secondary cascades
-            faces = self.face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4, minSize=(55, 55))
+            # Detect candidate faces using primary and secondary cascades (minNeighbors=5 eliminates grill noise)
+            faces = self.face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(60, 60))
             if len(faces) == 0:
-                faces = self.face_cascade_alt.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4, minSize=(55, 55))
+                faces = self.face_cascade_alt.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(60, 60))
 
             # BIO-VERIFICATION: Reject false detections on window grills, doors, or furniture!
-            # A window grill consists of painted metal/wood and white sky/glass (0-5% skin).
-            # A genuine human face contains at least 22% biological cutaneous tissue.
             valid_faces = []
             for face_box in faces:
                 fx, fy, fw, fh = face_box
                 crop = frame[max(0, fy):min(h, fy + fh), max(0, fx):min(w, fx + fw)]
                 if crop.size > 0:
                     hsv_crop = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
-                    skin_mask = cv2.inRange(hsv_crop, np.array([0, 20, 45]), np.array([25, 255, 255]))
+                    skin_mask = cv2.inRange(hsv_crop, np.array([0, 15, 20]), np.array([30, 255, 255]))
                     skin_ratio = np.count_nonzero(skin_mask) / float(crop.shape[0] * crop.shape[1])
-                    if skin_ratio >= 0.22:
+                    if skin_ratio >= 0.12:
                         valid_faces.append(face_box)
 
-            # Sort validated human faces by AREA descending (Largest face in foreground = Patient)
-            face_entries = sorted(valid_faces, key=lambda b: -(b[2] * b[3]))
+            # Prioritize the most central, prominent face for Bed #1 (primary patient in middle)
+            valid_faces.sort(key=lambda b: (abs((b[0] + b[2]//2) - w//2) - b[2]*b[3]*0.01))
+            face_entries = valid_faces
 
             # Reset fall risk defaults
             for slot in self.beds.values():
