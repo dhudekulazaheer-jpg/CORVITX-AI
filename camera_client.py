@@ -710,6 +710,9 @@ class CORVITXEdgeClient:
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
+                if frame_count == 0:
+                    print("\n[CAMERA ERROR] Webcam hardware is currently locked by another application.")
+                    print("[TIP] Please close any other app using the camera (e.g. Windows Camera, Teams, Zoom) and try again.\n")
                 break
             frame = cv2.flip(frame, 1)
             
