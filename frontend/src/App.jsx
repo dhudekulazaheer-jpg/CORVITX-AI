@@ -25,7 +25,11 @@ import {
   Check,
   AlertCircle,
   SlidersHorizontal,
-  ChevronRight
+  ChevronRight,
+  Volume2,
+  VolumeX,
+  Bell,
+  BellOff
 } from 'lucide-react';
 import { YAxis, ResponsiveContainer, AreaChart, Area } from 'recharts';
 
@@ -53,6 +57,11 @@ export default function App() {
 
   // Export success toast
   const [exportSuccess, setExportSuccess] = useState(false);
+
+  // Feature: ICU Audio Alarm & Nurse Silence System (Web Audio API)
+  const [audioEnabled, setAudioEnabled] = useState(true);
+  const [isSilenced, setIsSilenced] = useState(false);
+  const [silenceCountdown, setSilenceCountdown] = useState(0);
 
   // Real-time Clock
   useEffect(() => {
@@ -136,10 +145,116 @@ export default function App() {
     || safeBeds[0] 
     || fallbackBed;
 
-  // Custom threshold violations
+  // Custom threshold violations & Active Alarm State
   const customHrViolation = activeBed.hr > 0 && (activeBed.hr > thresholds.highHr || activeBed.hr < thresholds.lowHr);
   const customRrViolation = activeBed.rr > 0 && (activeBed.rr > thresholds.highRr || activeBed.rr < thresholds.lowRr);
+  const isAlarmActive = customHrViolation || customRrViolation || activeBed.mews >= 5 || activeBed.apnea_alert || activeBed.fall_risk;
   const hasCritical = safeBeds.some(b => b && (b.mews >= 5 || b.apnea_alert || b.fall_risk)) || customHrViolation;
+
+  // Formatted clinical alarm reasons
+  const alarmReasons = [];
+  if (activeBed.hr > thresholds.highHr) alarmReasons.push(`Tachycardia (${Math.round(activeBed.hr)} > ${thresholds.highHr} BPM)`);
+  if (activeBed.hr > 0 && activeBed.hr < thresholds.lowHr) alarmReasons.push(`Bradycardia (${Math.round(activeBed.hr)} < ${thresholds.lowHr} BPM)`);
+  if (activeBed.rr > thresholds.highRr) alarmReasons.push(`Tachypnea (${Math.round(activeBed.rr)} > ${thresholds.highRr} RPM)`);
+  if (activeBed.rr > 0 && activeBed.rr < thresholds.lowRr) alarmReasons.push(`Bradypnea/Apnea (${Math.round(activeBed.rr)} < ${thresholds.lowRr} RPM)`);
+  if (activeBed.mews >= 5) alarmReasons.push(`Critical MEWS ${activeBed.mews}/14`);
+  if (activeBed.apnea_alert) alarmReasons.push("Apnea Detected");
+  if (activeBed.fall_risk) alarmReasons.push("Fall Risk Detected");
+
+  // Silence Timer Countdown Effect
+  useEffect(() => {
+    let timer;
+    if (isSilenced && silenceCountdown > 0) {
+      timer = setInterval(() => {
+        setSilenceCountdown((prev) => {
+          if (prev <= 1) {
+            setIsSilenced(false);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [isSilenced, silenceCountdown]);
+
+  // Clinical Audio Chime Synthesizer (IEC 60601-1-8 standard harmonic alerts)
+  const playAlarmChime = (priority = 'high') => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+      const now = ctx.currentTime;
+
+      if (priority === 'high') {
+        // High Priority: 3 rapid pulse tones (880 Hz / A5)
+        [0, 0.16, 0.32].forEach((offset) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(880, now + offset);
+          gain.gain.setValueAtTime(0.18, now + offset);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.12);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now + offset);
+          osc.stop(now + offset + 0.12);
+        });
+      } else {
+        // Medium Priority: descending alert chime (659.25 Hz -> 587.33 Hz)
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(659.25, now);
+        osc.frequency.setValueAtTime(587.33, now + 0.15);
+        gain.gain.setValueAtTime(0.14, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      }
+    } catch (err) {
+      console.warn("Audio alarm playback prevented:", err);
+    }
+  };
+
+  // Trigger Audio Chime periodically during active alarm
+  useEffect(() => {
+    if (!audioEnabled || isSilenced || !isAlarmActive) return;
+
+    playAlarmChime(activeBed.mews >= 5 ? 'high' : 'medium');
+
+    const chimeInterval = setInterval(() => {
+      playAlarmChime(activeBed.mews >= 5 ? 'high' : 'medium');
+    }, 4000);
+
+    return () => clearInterval(chimeInterval);
+  }, [audioEnabled, isSilenced, isAlarmActive, activeBed.mews]);
+
+  const triggerSilenceAlarm = (seconds = 120) => {
+    setIsSilenced(true);
+    setSilenceCountdown(seconds);
+  };
+
+  const cancelSilence = () => {
+    setIsSilenced(false);
+    setSilenceCountdown(0);
+  };
+
+  const toggleAudioMaster = () => {
+    setAudioEnabled(prev => !prev);
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        const ctx = new AudioCtx();
+        if (ctx.state === 'suspended') ctx.resume();
+      }
+    } catch(e) {}
+  };
 
   // Ward KPI aggregations
   const activeCount = safeBeds.filter(b => b && b.hr > 0).length;
@@ -269,9 +384,50 @@ export default function App() {
             </button>
           </div>
 
-          {/* Clock, Export, Add Bed & Live Status */}
+          {/* Clock, Export, Audio Alarm Control, Add Bed & Live Status */}
           <div className="flex items-center gap-3">
             
+            {/* Audio Alarm Control Pill */}
+            {isAlarmActive ? (
+              !isSilenced ? (
+                <button
+                  onClick={() => triggerSilenceAlarm(120)}
+                  className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-full text-xs font-bold transition shadow-sm flex items-center gap-1.5 cursor-pointer animate-pulse"
+                  title="Silence medical alarm siren for 120 seconds"
+                >
+                  <VolumeX className="w-3.5 h-3.5" />
+                  <span>Silence (120s)</span>
+                </button>
+              ) : (
+                <button
+                  onClick={cancelSilence}
+                  className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-full text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+                  title="Alarm audio silenced. Click to resume siren"
+                >
+                  <Volume2 className="w-3.5 h-3.5" />
+                  <span>Silenced ({silenceCountdown}s)</span>
+                </button>
+              )
+            ) : (
+              <button
+                onClick={toggleAudioMaster}
+                className="px-3.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200/90 text-slate-700 rounded-full text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer hover:border-slate-300"
+                title={audioEnabled ? "Audio monitor armed (click to mute)" : "Audio monitor muted (click to arm)"}
+              >
+                {audioEnabled ? (
+                  <>
+                    <Volume2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="hidden sm:inline">Audio Armed</span>
+                  </>
+                ) : (
+                  <>
+                    <VolumeX className="w-3.5 h-3.5 text-slate-400" />
+                    <span className="hidden sm:inline">Audio Muted</span>
+                  </>
+                )}
+              </button>
+            )}
+
             {/* Feature 2: Header Export Button */}
             <button
               onClick={() => exportClinicalReport(activeBed)}
@@ -309,6 +465,55 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      {/* ============================================================ */}
+      {/* CLINICAL EMERGENCY STROBE BANNER & NURSE SILENCE CONTROL    */}
+      {/* ============================================================ */}
+      {isAlarmActive && (
+        <div className={`px-6 py-2.5 transition-all shadow-md ${
+          isSilenced 
+            ? 'bg-amber-500 text-white' 
+            : 'bg-rose-600 text-white animate-pulse'
+        }`}>
+          <div className="max-w-[1440px] mx-auto flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+              <div>
+                <span className="text-xs font-black tracking-wide uppercase mr-2">
+                  {isSilenced ? '🔕 ALARM AUDIO SILENCED' : '🚨 CRITICAL TELEMETRY ALARM'}
+                </span>
+                <span className="text-xs font-medium opacity-95">
+                  Bed #{activeBed.bed_id} — {alarmReasons.join(' • ') || 'Abnormal Vitals Detected'}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {!isSilenced ? (
+                <button
+                  onClick={() => triggerSilenceAlarm(120)}
+                  className="bg-white text-rose-700 hover:bg-rose-50 px-4 py-1.5 rounded-full text-xs font-black transition shadow-sm flex items-center gap-1.5 cursor-pointer"
+                >
+                  <VolumeX className="w-3.5 h-3.5" />
+                  Silence Alarm Siren (120s)
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono font-bold bg-white/20 px-3 py-1 rounded-full">
+                    Silenced: {silenceCountdown}s remaining
+                  </span>
+                  <button
+                    onClick={cancelSilence}
+                    className="bg-white/90 hover:bg-white text-amber-900 px-3 py-1 rounded-full text-xs font-bold transition cursor-pointer"
+                  >
+                    Resume Audio
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Export Success Toast Notification */}
       {exportSuccess && (
@@ -432,7 +637,13 @@ export default function App() {
               <div className="lg:col-span-8 space-y-6">
                 
                 {/* Hero Patient Card */}
-                <div className="bg-white rounded-3xl p-7 border border-slate-200/80 shadow-[0_4px_25px_-4px_rgba(15,23,42,0.05)] relative overflow-hidden">
+                <div className={`bg-white rounded-3xl p-7 border transition-all duration-300 relative overflow-hidden ${
+                  isAlarmActive 
+                    ? isSilenced
+                      ? 'border-amber-400 ring-2 ring-amber-300/50 shadow-[0_0_25px_rgba(245,158,11,0.15)]'
+                      : 'border-rose-500 ring-4 ring-rose-400/40 shadow-[0_0_35px_rgba(244,63,94,0.25)] animate-pulse'
+                    : 'border-slate-200/80 shadow-[0_4px_25px_-4px_rgba(15,23,42,0.05)]'
+                }`}>
                   
                   {/* Card Title & Bed Details */}
                   <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-6 border-b border-slate-100">
@@ -454,6 +665,18 @@ export default function App() {
                           }`}>
                             {activeBed.status || "Monitoring"}
                           </span>
+
+                          {/* Dynamic Alarm Strobe Badge */}
+                          {isAlarmActive && (
+                            <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border flex items-center gap-1 ${
+                              isSilenced 
+                                ? 'bg-amber-50 text-amber-800 border-amber-300' 
+                                : 'bg-rose-100 text-rose-800 border-rose-300 animate-pulse'
+                            }`}>
+                              {isSilenced ? <BellOff className="w-3 h-3 text-amber-700" /> : <Bell className="w-3 h-3 text-rose-700" />}
+                              {isSilenced ? `Silenced (${silenceCountdown}s)` : 'Alarm Active'}
+                            </span>
+                          )}
                         </div>
                         <p className="text-xs text-slate-400 font-semibold mt-0.5">
                           Patient: Zaheer D. (21M) • ID: CORVITX-P{String(activeBed.bed_id).padStart(4, '0')} • Room: ICU-Bay A
@@ -833,6 +1056,18 @@ export default function App() {
                         className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
                       >
                         Pediatric
+                      </button>
+                    </div>
+
+                    {/* Feature 5: Audio Chime Demonstration Button */}
+                    <div className="pt-2 border-t border-slate-100">
+                      <button 
+                        onClick={() => playAlarmChime('high')}
+                        className="w-full py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/90 text-slate-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-2xs hover:border-slate-300"
+                        title="Click to synthesize and test the IEC 60601-1-8 medical alarm tone"
+                      >
+                        <Volume2 className="w-3.5 h-3.5 text-rose-500" />
+                        Test IEC 60601-1-8 Audio Chime
                       </button>
                     </div>
 
