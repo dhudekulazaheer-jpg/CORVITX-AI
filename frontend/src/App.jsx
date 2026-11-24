@@ -16,7 +16,16 @@ import {
   Clock,
   Layers,
   Sparkles,
-  FileText
+  FileText,
+  Download,
+  User,
+  X,
+  Calendar,
+  Pill,
+  Check,
+  AlertCircle,
+  SlidersHorizontal,
+  ChevronRight
 } from 'lucide-react';
 import { YAxis, ResponsiveContainer, AreaChart, Area } from 'recharts';
 
@@ -30,6 +39,20 @@ export default function App() {
   const [history, setHistory] = useState([]);
   const [connected, setConnected] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString());
+  
+  // Feature 3: Patient EHR Drawer State
+  const [showEhrDrawer, setShowEhrDrawer] = useState(false);
+  
+  // Feature 4: Interactive Clinical Alarm Thresholds
+  const [thresholds, setThresholds] = useState({
+    highHr: 120,
+    lowHr: 50,
+    highRr: 28,
+    lowRr: 8
+  });
+
+  // Export success toast
+  const [exportSuccess, setExportSuccess] = useState(false);
 
   // Real-time Clock
   useEffect(() => {
@@ -108,18 +131,80 @@ export default function App() {
     hr_history: []
   };
 
-  const activeBed = (Array.isArray(beds) && beds.find(b => b && b.bed_id === selectedBedId)) 
-    || (Array.isArray(beds) && beds[0]) 
+  const safeBeds = Array.isArray(beds) ? beds : [];
+  const activeBed = (safeBeds.find(b => b && b.bed_id === selectedBedId)) 
+    || safeBeds[0] 
     || fallbackBed;
 
-  const hasCritical = Array.isArray(beds) && beds.some(b => b && (b.mews >= 5 || b.apnea_alert || b.fall_risk));
+  // Custom threshold violations
+  const customHrViolation = activeBed.hr > 0 && (activeBed.hr > thresholds.highHr || activeBed.hr < thresholds.lowHr);
+  const customRrViolation = activeBed.rr > 0 && (activeBed.rr > thresholds.highRr || activeBed.rr < thresholds.lowRr);
+  const hasCritical = safeBeds.some(b => b && (b.mews >= 5 || b.apnea_alert || b.fall_risk)) || customHrViolation;
 
   // Ward KPI aggregations
-  const safeBeds = Array.isArray(beds) ? beds : [];
   const activeCount = safeBeds.filter(b => b && b.hr > 0).length;
   const avgHr = activeCount > 0 ? Math.round(safeBeds.reduce((acc, b) => acc + (b.hr || 0), 0) / activeCount) : 0;
   const avgRr = activeCount > 0 ? (safeBeds.reduce((acc, b) => acc + (b.rr || 0), 0) / activeCount).toFixed(1) : 0;
   const criticalCount = safeBeds.filter(b => b && (b.mews >= 5 || b.apnea_alert || b.fall_risk)).length;
+
+  // ============================================================
+  // FEATURE 2: ONE-CLICK CLINICAL EMR REPORT EXPORT (CSV / EMR)
+  // ============================================================
+  const exportClinicalReport = (bed) => {
+    const timestamp = new Date().toLocaleString();
+    const bedHistory = history.filter(h => h.bed_id === bed.bed_id);
+    
+    let csv = "CORVITX-AI CLINICAL PATIENT TRIAGE & HEMODYNAMIC REPORT\r\n";
+    csv += "========================================================\r\n";
+    csv += `Report Generated: "${timestamp}"\r\n`;
+    csv += `Hospital Center: KARE Clinical Research Center - ICU Stepdown Bay A\r\n`;
+    csv += `Bed Identifier: Bed #${bed.bed_id}\r\n`;
+    csv += `Patient Name: Zaheer D.\r\n`;
+    csv += `Patient Age / Gender: 21 / Male\r\n`;
+    csv += `Blood Group: O+ Positive\r\n`;
+    csv += `Attending Physician: Dr. Sarah Vance, MD (Chief Intensivist)\r\n`;
+    csv += `Clinical Indication: Post-Operative Hemodynamic & Respiratory Surveillance\r\n\r\n`;
+    
+    csv += "CURRENT TRIAGE & VITALS SNAPSHOT\r\n";
+    csv += "Metric,Value,Unit,Clinical_Status\r\n";
+    csv += `Heart Rate,${bed.hr ? Math.round(bed.hr) : 'N/A'},BPM,${bed.hr > thresholds.highHr ? 'Tachycardia Alert' : (bed.hr < thresholds.lowHr && bed.hr > 0) ? 'Bradycardia Alert' : 'Normal Sinus Rhythm'}\r\n`;
+    csv += `Respiration Rate,${bed.rr ? Math.round(bed.rr) : 'N/A'},RPM,${bed.rr < thresholds.lowRr ? 'Apnea / Bradypnea Alert' : 'Eupnea / Normal'}\r\n`;
+    csv += `Modified Early Warning Score (MEWS),${bed.mews ?? 0},/14,${bed.mews >= 5 ? 'Critical (Immediate Resuscitation)' : bed.mews >= 3 ? 'Warning (Increased Monitoring)' : 'Stable (Low Risk)'}\r\n`;
+    csv += `Optical Tracking Channel,"${bed.status || 'Monitoring'}",rPPG,Cutaneous POS Algorithm\r\n\r\n`;
+    
+    csv += "LIVE 30-SAMPLE INSTANTANEOUS CARDIAC WAVE LOG\r\n";
+    csv += "Sample_Index,Recorded_Time,Pulse_BPM\r\n";
+    if (bed.hr_history && bed.hr_history.length > 0) {
+      bed.hr_history.forEach((sample, i) => {
+        const sampleTime = sample.time ? new Date(sample.time * 1000).toLocaleTimeString() : `T-${bed.hr_history.length - i}s`;
+        csv += `${i + 1},"${sampleTime}",${sample.hr}\r\n`;
+      });
+    } else {
+      csv += `1,"Current",${bed.hr || 0}\r\n`;
+    }
+    
+    csv += "\r\nEMERGENCY AUDIT DATABASE LOGS FOR THIS BED (SQLITE)\r\n";
+    csv += "Timestamp,Bed_ID,Heart_Rate_BPM,MEWS_Score,Triage_Event\r\n";
+    if (bedHistory.length > 0) {
+      bedHistory.forEach(h => {
+        csv += `"${h.timestamp}",${h.bed_id},${h.hr},${h.mews},"${h.status}"\r\n`;
+      });
+    } else {
+      csv += `"N/A",${bed.bed_id},${bed.hr || 0},${bed.mews || 0},"No critical alerts logged for this bed"\r\n`;
+    }
+    
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `CORVITX_EMR_Report_Bed_${bed.bed_id}_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    setExportSuccess(true);
+    setTimeout(() => setExportSuccess(false), 3000);
+  };
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] font-sans antialiased selection:bg-rose-100 selection:text-rose-900 pb-16">
@@ -184,8 +269,19 @@ export default function App() {
             </button>
           </div>
 
-          {/* Clock, Add Bed & Live Status */}
+          {/* Clock, Export, Add Bed & Live Status */}
           <div className="flex items-center gap-3">
+            
+            {/* Feature 2: Header Export Button */}
+            <button
+              onClick={() => exportClinicalReport(activeBed)}
+              className="px-3.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200/90 text-slate-700 rounded-full text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer hover:border-slate-300"
+              title="Download Clinical EMR Triage Report"
+            >
+              <Download className="w-3.5 h-3.5 text-sky-600" />
+              <span className="hidden sm:inline">Export EMR Report</span>
+            </button>
+
             <div className="hidden lg:flex items-center gap-2 text-xs font-semibold text-slate-500 bg-white px-3.5 py-1.5 rounded-full border border-slate-200/80 shadow-xs">
               <Clock className="w-3.5 h-3.5 text-slate-400" />
               <span className="font-mono">{currentTime}</span>
@@ -214,6 +310,14 @@ export default function App() {
         </div>
       </header>
 
+      {/* Export Success Toast Notification */}
+      {exportSuccess && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-bounce">
+          <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+          <span className="text-xs font-bold">EMR Clinical Report Exported to CSV!</span>
+        </div>
+      )}
+
       {/* ============================================================ */}
       {/* 2. MAIN WORKSPACE CONTAINER                                  */}
       {/* ============================================================ */}
@@ -237,7 +341,9 @@ export default function App() {
                       Critical Clinical Emergency Alert
                     </h2>
                     <p className="text-xs text-rose-800 font-medium mt-0.5">
-                      MEWS score exceeded critical threshold (&ge;5), Apnea detected, or Bed-Exit displacement occurring.
+                      {customHrViolation 
+                        ? `Custom Heart Rate Alarm Triggered: ${Math.round(activeBed.hr)} BPM exceeds threshold limits (${thresholds.lowHr} - ${thresholds.highHr} BPM)!` 
+                        : "MEWS score exceeded critical threshold (>=5), Apnea detected, or Bed-Exit displacement occurring."}
                     </p>
                   </div>
                 </div>
@@ -350,16 +456,30 @@ export default function App() {
                           </span>
                         </div>
                         <p className="text-xs text-slate-400 font-semibold mt-0.5">
-                          ID: CORVITX-P{String(activeBed.bed_id).padStart(4, '0')} • Status: Live Clinical Edge Node
+                          Patient: Zaheer D. (21M) • ID: CORVITX-P{String(activeBed.bed_id).padStart(4, '0')} • Room: ICU-Bay A
                         </p>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <div className="px-3.5 py-1.5 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5">
-                        <Radio className="w-3.5 h-3.5 text-rose-500 animate-pulse" />
-                        Live Optical Stream
-                      </div>
+                      {/* Feature 3: Open EHR Drawer Button */}
+                      <button 
+                        onClick={() => setShowEhrDrawer(true)}
+                        className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5"
+                      >
+                        <User className="w-3.5 h-3.5 text-sky-600" />
+                        Patient EHR Profile
+                      </button>
+
+                      {/* Feature 2: Export Button */}
+                      <button 
+                        onClick={() => exportClinicalReport(activeBed)}
+                        className="px-3.5 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5"
+                        title="Download CSV Clinical Report"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Export
+                      </button>
                     </div>
                   </div>
 
@@ -367,7 +487,11 @@ export default function App() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     
                     {/* Heart Rate Tile */}
-                    <div className="bg-gradient-to-br from-rose-50/80 via-rose-50/20 to-white rounded-3xl p-5 border border-rose-100 shadow-2xs">
+                    <div className={`rounded-3xl p-5 border shadow-2xs transition-all ${
+                      customHrViolation
+                        ? 'bg-rose-100/80 border-rose-300 animate-pulse'
+                        : 'bg-gradient-to-br from-rose-50/80 via-rose-50/20 to-white border-rose-100'
+                    }`}>
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-[11px] font-bold text-rose-500 tracking-wider uppercase">Heart Rate</span>
                         <div className="p-2 rounded-xl bg-rose-100/70 text-rose-600">
@@ -381,13 +505,17 @@ export default function App() {
                         <span className="text-sm font-bold text-rose-500 ml-1">BPM</span>
                       </div>
                       <div className="mt-3 pt-3 border-t border-rose-100/70 flex items-center justify-between text-[11px] text-slate-500">
-                        <span>Resting Band: 60–100</span>
+                        <span>Threshold: {thresholds.lowHr} - {thresholds.highHr}</span>
                         <span className="font-semibold text-rose-600">POS rPPG</span>
                       </div>
                     </div>
 
                     {/* Respiration Rate Tile */}
-                    <div className="bg-gradient-to-br from-teal-50/80 via-teal-50/20 to-white rounded-3xl p-5 border border-teal-100 shadow-2xs">
+                    <div className={`rounded-3xl p-5 border shadow-2xs transition-all ${
+                      customRrViolation
+                        ? 'bg-teal-100/80 border-teal-300 animate-pulse'
+                        : 'bg-gradient-to-br from-teal-50/80 via-teal-50/20 to-white border-teal-100'
+                    }`}>
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-[11px] font-bold text-teal-700 tracking-wider uppercase">Respiration</span>
                         <div className="p-2 rounded-xl bg-teal-100/70 text-teal-700">
@@ -401,7 +529,7 @@ export default function App() {
                         <span className="text-sm font-bold text-teal-600 ml-1">RPM</span>
                       </div>
                       <div className="mt-3 pt-3 border-t border-teal-100/70 flex items-center justify-between text-[11px] text-slate-500">
-                        <span>Normal Band: 12–20</span>
+                        <span>Threshold: {thresholds.lowRr} - {thresholds.highRr}</span>
                         <span className="font-semibold text-teal-700">Green Channel</span>
                       </div>
                     </div>
@@ -516,7 +644,7 @@ export default function App() {
               </div>
 
               {/* ===================================================== */}
-              {/* RIGHT: WARD BED ROSTER & CLINICAL CONTROLS (4 COLUMNS)*/}
+              {/* RIGHT: WARD BED ROSTER & FEATURE 4 SLIDERS (4 COLS)   */}
               {/* ===================================================== */}
               <div className="lg:col-span-4 space-y-6">
                 
@@ -597,45 +725,117 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Clinical Safety & Alarm Threshold Controls */}
+                {/* ============================================================ */}
+                {/* FEATURE 4: INTERACTIVE ALARM THRESHOLD SLIDERS               */}
+                {/* ============================================================ */}
                 <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-[0_4px_25px_-4px_rgba(15,23,42,0.05)]">
-                  <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-100">
-                    <Sliders className="w-4 h-4 text-slate-700" />
-                    <h3 className="text-sm font-bold text-[#0F172A] uppercase tracking-wider">
-                      Clinical Safety Gates
-                    </h3>
+                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                    <div className="flex items-center gap-2">
+                      <SlidersHorizontal className="w-4 h-4 text-slate-700" />
+                      <h3 className="text-sm font-bold text-[#0F172A] uppercase tracking-wider">
+                        Custom Alarm Thresholds
+                      </h3>
+                    </div>
+                    <span className="text-[10px] font-bold text-sky-600 bg-sky-50 px-2.5 py-0.5 rounded-full border border-sky-200">
+                      LIVE TUNER
+                    </span>
                   </div>
 
-                  <div className="space-y-3.5">
-                    <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                      <div>
-                        <span className="text-xs font-bold text-slate-800 block">Cutaneous Neck Fallback</span>
-                        <span className="text-[10px] text-slate-400 font-medium">Auto-switches if face obscured</span>
+                  <div className="space-y-4">
+                    {/* Slider 1: High HR */}
+                    <div>
+                      <div className="flex justify-between items-center text-xs mb-1.5">
+                        <span className="font-bold text-slate-700">Tachycardia Alert (High HR)</span>
+                        <span className="font-mono font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">
+                          &gt; {thresholds.highHr} BPM
+                        </span>
                       </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                        ENABLED
-                      </span>
+                      <input 
+                        type="range" 
+                        min="90" 
+                        max="160" 
+                        value={thresholds.highHr}
+                        onChange={(e) => setThresholds({ ...thresholds, highHr: Number(e.target.value) })}
+                        className="w-full accent-rose-500 h-1.5 bg-slate-100 rounded-lg cursor-pointer"
+                      />
                     </div>
 
-                    <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                      <div>
-                        <span className="text-xs font-bold text-slate-800 block">Motion-Artifact Rejection</span>
-                        <span className="text-[10px] text-slate-400 font-medium">Intensity gradient gating (8.0&Delta;)</span>
+                    {/* Slider 2: Low HR */}
+                    <div>
+                      <div className="flex justify-between items-center text-xs mb-1.5">
+                        <span className="font-bold text-slate-700">Bradycardia Alert (Low HR)</span>
+                        <span className="font-mono font-bold text-sky-600 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-200">
+                          &lt; {thresholds.lowHr} BPM
+                        </span>
                       </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                        ACTIVE
-                      </span>
+                      <input 
+                        type="range" 
+                        min="40" 
+                        max="65" 
+                        value={thresholds.lowHr}
+                        onChange={(e) => setThresholds({ ...thresholds, lowHr: Number(e.target.value) })}
+                        className="w-full accent-sky-500 h-1.5 bg-slate-100 rounded-lg cursor-pointer"
+                      />
                     </div>
 
-                    <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                      <div>
-                        <span className="text-xs font-bold text-slate-800 block">Liveness SNR Discriminator</span>
-                        <span className="text-[10px] text-slate-400 font-medium">Spectral harmonic peak checking</span>
+                    {/* Slider 3: High RR */}
+                    <div>
+                      <div className="flex justify-between items-center text-xs mb-1.5">
+                        <span className="font-bold text-slate-700">Tachypnea Alert (High Resp)</span>
+                        <span className="font-mono font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
+                          &gt; {thresholds.highRr} RPM
+                        </span>
                       </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                        1.25 SNR
-                      </span>
+                      <input 
+                        type="range" 
+                        min="20" 
+                        max="35" 
+                        value={thresholds.highRr}
+                        onChange={(e) => setThresholds({ ...thresholds, highRr: Number(e.target.value) })}
+                        className="w-full accent-teal-600 h-1.5 bg-slate-100 rounded-lg cursor-pointer"
+                      />
                     </div>
+
+                    {/* Slider 4: Low RR */}
+                    <div>
+                      <div className="flex justify-between items-center text-xs mb-1.5">
+                        <span className="font-bold text-slate-700">Bradypnea / Apnea Limit</span>
+                        <span className="font-mono font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                          &lt; {thresholds.lowRr} RPM
+                        </span>
+                      </div>
+                      <input 
+                        type="range" 
+                        min="6" 
+                        max="14" 
+                        value={thresholds.lowRr}
+                        onChange={(e) => setThresholds({ ...thresholds, lowRr: Number(e.target.value) })}
+                        className="w-full accent-amber-500 h-1.5 bg-slate-100 rounded-lg cursor-pointer"
+                      />
+                    </div>
+
+                    {/* Preset Buttons */}
+                    <div className="pt-2 flex items-center justify-between gap-2 border-t border-slate-100">
+                      <button 
+                        onClick={() => setThresholds({ highHr: 120, lowHr: 50, highRr: 28, lowRr: 8 })}
+                        className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
+                      >
+                        Adult Standard
+                      </button>
+                      <button 
+                        onClick={() => setThresholds({ highHr: 105, lowHr: 55, highRr: 24, lowRr: 10 })}
+                        className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
+                      >
+                        Geriatric Strict
+                      </button>
+                      <button 
+                        onClick={() => setThresholds({ highHr: 150, lowHr: 70, highRr: 35, lowRr: 14 })}
+                        className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
+                      >
+                        Pediatric
+                      </button>
+                    </div>
+
                   </div>
                 </div>
 
@@ -665,9 +865,18 @@ export default function App() {
                   </p>
                 </div>
               </div>
-              <span className="text-xs font-mono font-bold text-slate-500 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
-                {history.length} Critical Events Logged
-              </span>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => exportClinicalReport(activeBed)}
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Download Full Log Report
+                </button>
+                <span className="text-xs font-mono font-bold text-slate-500 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
+                  {history.length} Critical Events Logged
+                </span>
+              </div>
             </div>
 
             <div className="p-0 overflow-x-auto">
@@ -710,6 +919,129 @@ export default function App() {
         )}
 
       </main>
+
+      {/* ============================================================ */}
+      {/* FEATURE 3: PATIENT CLINICAL EHR DRAWER (MODAL SLIDE-OVER)    */}
+      {/* ============================================================ */}
+      {showEhrDrawer && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex justify-end transition-opacity animate-in fade-in duration-200">
+          <div className="w-full max-w-lg bg-white h-full shadow-2xl p-7 overflow-y-auto border-l border-slate-200 flex flex-col justify-between">
+            
+            <div>
+              {/* Drawer Header */}
+              <div className="flex items-center justify-between pb-5 border-b border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-2xl bg-sky-50 text-sky-600 border border-sky-100">
+                    <User className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-slate-900 tracking-tight">Electronic Health Record (EHR)</h3>
+                    <p className="text-xs text-slate-400 font-medium">Hospital Patient Master Index • Bed #{activeBed.bed_id}</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowEhrDrawer(false)}
+                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Patient Identification Card */}
+              <div className="mt-6 p-5 rounded-3xl bg-gradient-to-tr from-sky-50 via-teal-50 to-emerald-50 border border-sky-100 flex items-center gap-4">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-sky-600 to-teal-500 text-white font-black text-2xl flex items-center justify-center shadow-md shadow-sky-500/20 font-sans">
+                  ZD
+                </div>
+                <div>
+                  <h4 className="text-xl font-black text-slate-900 tracking-tight">Zaheer D.</h4>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs font-bold text-slate-600">21 Yrs • Male</span>
+                    <span className="text-slate-300">•</span>
+                    <span className="text-xs font-bold text-rose-600 bg-white px-2 py-0.5 rounded-full border border-rose-200 font-mono">Blood: O+</span>
+                  </div>
+                  <span className="text-[11px] font-mono text-slate-400 mt-1 block">MRN: #CORVITX-9042-2026</span>
+                </div>
+              </div>
+
+              {/* Clinical Detail Cards */}
+              <div className="mt-6 space-y-4">
+                
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Admission Diagnosis</span>
+                  <p className="text-sm font-bold text-slate-800">
+                    Post-Operative Pulmonary Surveillance & Autonomous Hemodynamic Monitoring
+                  </p>
+                  <span className="text-xs text-slate-500 mt-1 block">Admitted: ICU Stepdown Ward Bay A • Bed #{activeBed.bed_id}</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Attending Physician</span>
+                    <p className="text-xs font-bold text-slate-800">Dr. Sarah Vance, MD</p>
+                    <span className="text-[10px] text-slate-500">Chief Intensivist (Critical Care)</span>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Primary Care Nurse</span>
+                    <p className="text-xs font-bold text-slate-800">Staff Nurse Wilson, RN</p>
+                    <span className="text-[10px] text-slate-500">ICU Telemetry Station</span>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-rose-50/60 border border-rose-100">
+                  <span className="text-[11px] font-bold text-rose-500 uppercase tracking-wider block mb-1">Allergies & Contraindications</span>
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-white text-rose-700 border border-rose-200">
+                      Penicillin (Moderate Rash)
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-white text-rose-700 border border-rose-200">
+                      Latex (Contact Dermatitis)
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Active Medical Orders</span>
+                  <ul className="text-xs space-y-1.5 text-slate-700 mt-2 font-medium">
+                    <li className="flex items-center gap-2">
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      Continuous Contactless rPPG Telemetry Protocol
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      Cefazolin 1g IV Q8H (Post-op Prophylaxis)
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      Normal Saline 0.9% IV @ 75 mL/hr
+                    </li>
+                  </ul>
+                </div>
+
+              </div>
+            </div>
+
+            {/* Drawer Bottom Actions */}
+            <div className="pt-6 border-t border-slate-100 space-y-2 mt-6">
+              <button 
+                onClick={() => exportClinicalReport(activeBed)}
+                className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-md"
+              >
+                <Download className="w-4 h-4" />
+                Export Full EHR Record (CSV)
+              </button>
+              <button 
+                onClick={() => setShowEhrDrawer(false)}
+                className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-xs font-bold transition cursor-pointer"
+              >
+                Close Drawer
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
